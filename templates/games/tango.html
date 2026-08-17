@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Tango - Play{% endblock %}
+{% block body_class %}page-tango{% endblock %}
+{% block content %}
+{% include 'games/_hud.html' %}
+<p class="text-center text-muted small">Tap a cell to cycle: empty → ☀️ → 🌙. Equal Suns &amp; Moons per row/column, no 3 in a row, honor the = and × marks.</p>
+
+<div class="text-center position-relative">
+  <div id="grid" class="puzzle-grid" style="margin-top:12px;"></div>
+  <div id="overlay" class="d-none" style="position:absolute; inset:0; background:rgba(0,0,0,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.4rem; border-radius:8px;">Paused</div>
+</div>
+
+{% include 'games/_controls.html' %}
+{% include 'games/_complete_modal.html' %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/tango.js') }}"></script>
+<script>
+initTango({
+  size: {{ size }},
+  difficulty: "{{ difficulty }}",
+  game: "tango",
+  daily: {{ 'true' if daily else 'false' }},
+  seed: {{ (seed | tojson) if seed else 'null' }}
+});
+</script>
+{% endblock %}
