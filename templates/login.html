@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameHub — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --maroon:#7A2E22; --maroon-dark:#5C2117; --rust:#C0392B;
+    --glass: rgba(255,255,255,0.55);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; font-family:'Inter', sans-serif; }
+  body{
+    min-height:100vh; overflow:hidden; position:relative;
+    background: linear-gradient(180deg, #FDEBD3 0%, #F8C979 38%, #F0A050 62%, #E2793A 100%);
+  }
+  .scene{ position:fixed; inset:0; overflow:hidden; }
+  .cloud{ position:absolute; top:6%; width:220px; height:70px; background:rgba(255,255,255,0.55); border-radius:60px; filter:blur(1px); }
+  .cloud::before, .cloud::after{ content:""; position:absolute; background:inherit; border-radius:50%; }
+  .cloud::before{ width:90px; height:90px; top:-40px; left:20px; }
+  .cloud::after{ width:70px; height:70px; top:-28px; right:25px; }
+  .cloud-1{ left:5%; animation: drift 60s linear infinite; }
+  .cloud-2{ left:55%; top:12%; transform:scale(0.7); animation: drift 75s linear infinite reverse; }
+  @keyframes drift{ from{ transform:translateX(-10%);} to{ transform:translateX(10vw);} }
+  .ground{ position:absolute; left:0; right:0; bottom:0; height:26%; background: linear-gradient(180deg, rgba(226,121,58,0) 0%, #D9691F 55%, #B84E15 100%); }
+  .tree{ position:absolute; bottom:20%; }
+  .tree svg{ display:block; }
+  .tree-left-1{ left:-40px; bottom:16%; width:280px; z-index:3; }
+  .tree-left-2{ left:190px; bottom:24%; width:170px; opacity:0.9; z-index:1; }
+  .tree-right-1{ right:-60px; bottom:14%; width:320px; z-index:3; }
+  .tree-right-2{ right:210px; bottom:26%; width:160px; opacity:0.85; z-index:1; }
+  .bush{ position:absolute; bottom:0; width:220px; }
+  .bush-1{ left:-30px; } .bush-2{ right:-20px; }
+  .leaves{ position:absolute; inset:0; pointer-events:none; z-index:5; }
+  .leaf{ position:absolute; top:-40px; will-change: transform; animation-name: fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+  @keyframes fall{ 0%{ transform: translate(0,0) rotate(0deg); opacity:0;} 6%{ opacity:1;} 100%{ transform: translate(var(--drift,40px), 112vh) rotate(380deg); opacity:0.9;} }
+  .rider-track{ position:absolute; bottom:20%; left:0; width:100%; height:220px; z-index:4; pointer-events:none; }
+  .rider{ position:absolute; bottom:0; left:0; width:180px; animation: ride 16s linear infinite; }
+  @keyframes ride{ 0%{ transform: translateX(-220px);} 100%{ transform: translateX(calc(100vw + 220px));} }
+  .rider .wheel{ transform-origin:center; animation: spin 0.6s linear infinite; }
+  .rider .leg-back{ transform-origin: 96px 118px; animation: pedal 0.6s ease-in-out infinite; }
+  .rider .leg-front{ transform-origin: 96px 118px; animation: pedal 0.6s ease-in-out infinite reverse; }
+  @keyframes spin{ to{ transform: rotate(360deg);} }
+  @keyframes pedal{ 0%,100%{ transform: rotate(-14deg);} 50%{ transform: rotate(14deg);} }
+  .rider .bob{ animation: bob 0.6s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{ transform: translateY(0px);} 50%{ transform: translateY(-2px);} }
+  .wrap{ position:relative; z-index:10; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card{
+    width:100%; max-width:420px; padding:44px 40px 36px; background: var(--glass);
+    backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border:1px solid rgba(255,255,255,0.6); border-radius:22px; box-shadow: 0 30px 60px -20px rgba(90,40,20,0.45);
+  }
+  .card h1{ font-family:'Baloo 2', sans-serif; font-weight:800; font-size:32px; color:var(--maroon); text-align:center; margin:0 0 6px; }
+  .card .sub{ text-align:center; font-size:13.5px; color:rgba(90,45,25,0.65); margin:0 0 26px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12px; font-weight:600; color:var(--maroon-dark); margin-bottom:6px; letter-spacing:0.02em; }
+  .field input{
+    width:100%; padding:14px 16px; font-size:14.5px; font-family:inherit; color:var(--maroon-dark);
+    background:rgba(255,255,255,0.9); border:1.5px solid rgba(122,46,34,0.15); border-radius:12px; outline:none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .field input::placeholder{ color:rgba(90,45,25,0.4); }
+  .field input:focus{ border-color:var(--rust); background:#fff; box-shadow:0 0 0 4px rgba(192,57,43,0.14); }
+  button.primary{
+    width:100%; padding:14px; margin-top:6px; font-family:'Baloo 2', sans-serif; font-size:16px; font-weight:700;
+    color:#fff; background: linear-gradient(180deg, var(--rust), var(--maroon)); border:none; border-radius:12px; cursor:pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease; box-shadow: 0 10px 22px -8px rgba(122,46,34,0.55);
+  }
+  button.primary:hover{ transform:translateY(-1px); box-shadow:0 14px 26px -8px rgba(122,46,34,0.6); }
+  button.primary:active{ transform:scale(0.98); }
+  .alert{ background: rgba(192,57,43,0.14); border:1.5px solid rgba(192,57,43,0.4); color: var(--maroon-dark); font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:16px; text-align:center; }
+  @media (max-width:480px){ .card{ padding:34px 24px 28px; } .rider{ width:140px; } .tree-left-2, .tree-right-2{ display:none; } }
+  @media (prefers-reduced-motion: reduce){ .rider,.rider .wheel,.rider .leg-back,.rider .leg-front,.rider .bob,.leaf,.cloud-1,.cloud-2{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="cloud cloud-1"></div>
+  <div class="cloud cloud-2"></div>
+  <div class="tree tree-left-2"><svg viewBox="0 0 200 260" width="100%"><rect x="90" y="140" width="20" height="120" fill="#4A2517"/><ellipse cx="100" cy="90" rx="95" ry="70" fill="#E39A6B"/><ellipse cx="60" cy="70" rx="55" ry="45" fill="#EFB98A"/></svg></div>
+  <div class="tree tree-left-1"><svg viewBox="0 0 260 340" width="100%"><rect x="118" y="180" width="26" height="160" fill="#5A2E1F"/><path d="M130 190 L70 140 M130 170 L190 120 M130 150 L100 90" stroke="#3E1F14" stroke-width="10" stroke-linecap="round"/><ellipse cx="130" cy="95" rx="128" ry="95" fill="#D35400"/><ellipse cx="70" cy="70" rx="75" ry="60" fill="#E8724C"/><ellipse cx="190" cy="75" rx="70" ry="55" fill="#EF9C74"/></svg></div>
+  <div class="tree tree-right-2"><svg viewBox="0 0 200 260" width="100%"><rect x="90" y="140" width="20" height="120" fill="#4A2517"/><ellipse cx="100" cy="90" rx="95" ry="70" fill="#E39A6B"/><ellipse cx="140" cy="70" rx="55" ry="45" fill="#EFB98A"/></svg></div>
+  <div class="tree tree-right-1"><svg viewBox="0 0 260 340" width="100%"><rect x="116" y="180" width="26" height="160" fill="#5A2E1F"/><path d="M130 190 L190 140 M130 170 L70 120 M130 150 L160 90" stroke="#3E1F14" stroke-width="10" stroke-linecap="round"/><ellipse cx="130" cy="95" rx="128" ry="95" fill="#D35400"/><ellipse cx="190" cy="70" rx="75" ry="60" fill="#E8724C"/><ellipse cx="70" cy="75" rx="70" ry="55" fill="#EF9C74"/></svg></div>
+  <svg class="bush bush-1" viewBox="0 0 220 120"><ellipse cx="60" cy="90" rx="70" ry="45" fill="#7A2E22"/><ellipse cx="150" cy="95" rx="60" ry="40" fill="#9C3A28"/></svg>
+  <svg class="bush bush-2" viewBox="0 0 220 120"><ellipse cx="160" cy="90" rx="70" ry="45" fill="#7A2E22"/><ellipse cx="70" cy="95" rx="60" ry="40" fill="#9C3A28"/></svg>
+  <div class="ground"></div>
+  <div class="rider-track">
+    <svg class="rider" viewBox="0 0 200 160">
+      <g class="bob">
+        <g class="wheel" style="transform-origin:56px 128px"><circle cx="56" cy="128" r="26" fill="none" stroke="#3E2A1E" stroke-width="6"/><line x1="56" y1="104" x2="56" y2="152" stroke="#3E2A1E" stroke-width="3"/><line x1="34" y1="112" x2="78" y2="144" stroke="#3E2A1E" stroke-width="3"/><line x1="34" y1="144" x2="78" y2="112" stroke="#3E2A1E" stroke-width="3"/></g>
+        <g class="wheel" style="transform-origin:142px 128px"><circle cx="142" cy="128" r="26" fill="none" stroke="#3E2A1E" stroke-width="6"/><line x1="142" y1="104" x2="142" y2="152" stroke="#3E2A1E" stroke-width="3"/><line x1="120" y1="112" x2="164" y2="144" stroke="#3E2A1E" stroke-width="3"/><line x1="120" y1="144" x2="164" y2="112" stroke="#3E2A1E" stroke-width="3"/></g>
+        <path d="M56 128 L96 118 L142 128 M96 118 L100 82 M96 118 L70 88 M100 82 L124 82" stroke="#D9691F" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="124" y1="82" x2="132" y2="70" stroke="#D9691F" stroke-width="6" stroke-linecap="round"/>
+        <g class="leg-back"><path d="M96 118 L84 138 L70 128" stroke="#7A2E22" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <g class="leg-front"><path d="M96 118 L108 138 L96 152" stroke="#B23A22" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <path d="M70 88 L58 66" stroke="#25406B" stroke-width="10" stroke-linecap="round"/>
+        <path d="M70 88 L96 60 L118 55" stroke="#2C4A78" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="52" cy="52" r="15" fill="#C77B4A"/>
+        <path d="M38 46 A16 16 0 0 1 66 46 L66 40 A16 16 0 0 0 38 40 Z" fill="#2C4A78"/>
+        <rect x="38" y="52" width="12" height="14" rx="4" fill="#B23A22"/>
+      </g>
+    </svg>
+  </div>
+  <div class="leaves" id="leaves"></div>
+</div>
+
+<div class="wrap">
+  <form class="card" method="POST" action="{{ url_for('login') }}" novalidate>
+    <div style="text-align:center; font-size:48px; line-height:1; margin-bottom:6px;">🎮</div>
+    <h1>Welcome Back</h1>
+    <p class="sub">Login to Entertainment Games</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for category, msg in messages %}<div class="alert">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <div class="field">
+      <label for="login-user">Username or Email</label>
+      <input type="text" id="login-user" name="identifier" placeholder="Username or Email" autocomplete="username" required autofocus>
+    </div>
+    <div class="field">
+      <label for="login-pass">Password</label>
+      <input type="password" id="login-pass" name="password" placeholder="Password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="primary">Login</button>
+  </form>
+</div>
+
+<script>
+  const leafColors = ['#C0392B', '#D35400', '#E67E22', '#7A2E22', '#A34A2A'];
+  const leafShapes = ['M12 0 C 20 8, 20 20, 12 26 C 4 20, 4 8, 12 0 Z','M0 12 C 8 4, 20 4, 26 12 C 20 20, 8 20, 0 12 Z'];
+  const leavesEl = document.getElementById('leaves');
+  for (let i = 0; i < 22; i++){
+    const size = 14 + Math.random() * 14;
+    const left = Math.random() * 100;
+    const duration = 9 + Math.random() * 9;
+    const delay = Math.random() * 14;
+    const drift = (Math.random() * 160 - 80).toFixed(0) + 'px';
+    const color = leafColors[Math.floor(Math.random() * leafColors.length)];
+    const shape = leafShapes[Math.floor(Math.random() * leafShapes.length)];
+    const wrapper = document.createElement('div');
+    wrapper.className = 'leaf';
+    wrapper.style.left = left + '%';
+    wrapper.style.setProperty('--drift', drift);
+    wrapper.style.animationDuration = duration + 's';
+    wrapper.style.animationDelay = delay + 's';
+    wrapper.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 26 26"><path d="${shape}" fill="${color}"/></svg>`;
+    leavesEl.appendChild(wrapper);
+  }
+</script>
+</body>
+</html>
