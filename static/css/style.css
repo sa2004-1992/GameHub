@@ -1,0 +1,127 @@
+:root{
+  --gh-bg: #f4f6fb;
+  --gh-surface: #ffffff;
+  --gh-text: #1c2333;
+  --gh-muted: #6c7486;
+  --gh-border: #e3e7f0;
+  --gh-primary: #5b5bf6;
+  --gh-primary-dark: #4444d1;
+  --gh-accent: #ff9f43;
+  --gh-shadow: 0 6px 20px rgba(30,30,60,0.08);
+}
+[data-theme="dark"]{
+  --gh-bg: #10121c;
+  --gh-surface: #1a1d2b;
+  --gh-text: #eef0f8;
+  --gh-muted: #9aa1b5;
+  --gh-border: #2b2f42;
+  --gh-primary: #7b7bff;
+  --gh-primary-dark: #9393ff;
+  --gh-accent: #ffb35c;
+  --gh-shadow: 0 6px 24px rgba(0,0,0,0.4);
+}
+body{
+  background: var(--gh-bg);
+  color: var(--gh-text);
+  transition: background .2s ease, color .2s ease;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+}
+.gh-navbar{
+  background: var(--gh-surface);
+  border-bottom: 1px solid var(--gh-border);
+}
+.navbar-brand, .nav-link{ color: var(--gh-text) !important; }
+.card{
+  background: var(--gh-surface);
+  color: var(--gh-text);
+  border: 1px solid var(--gh-border);
+  box-shadow: var(--gh-shadow);
+}
+.auth-wrap{ max-width: 460px; margin: 3rem auto; }
+.auth-card{ border-radius: 16px; }
+.wizard-wrap{ max-width: 760px; }
+.step-indicator{ display:flex; gap: .5rem; }
+.step-indicator .step{
+  padding: .4rem .9rem; border-radius: 999px; background: var(--gh-border);
+  color: var(--gh-muted); font-size: .85rem; font-weight: 600;
+}
+.step-indicator .step.active{ background: var(--gh-primary); color: #fff; }
+.rules-list li{ margin-bottom: .4rem; }
+.game-tile{ border-radius: 16px; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.game-tile:hover{ transform: translateY(-4px); box-shadow: 0 10px 26px rgba(30,30,60,0.16); }
+.game-tile-icon{ font-size: 2.2rem; margin-bottom: .3rem; }
+.quick-link{ font-weight: 600; cursor: pointer; }
+.daily-card{ border-radius: 16px; background: linear-gradient(135deg, rgba(91,91,246,.08), rgba(255,159,67,.08)); }
+.size-btn.active-choice, .diff-btn.active-choice, .mode-btn.active-choice{
+  background: var(--gh-primary); color: #fff; border-color: var(--gh-primary);
+}
+.btn-primary{ background: var(--gh-primary); border-color: var(--gh-primary); }
+.btn-primary:hover{ background: var(--gh-primary-dark); border-color: var(--gh-primary-dark); }
+
+/* ---- Game board generics ---- */
+.hud{
+  display:flex; flex-wrap:wrap; gap: 1rem; align-items:center; justify-content:space-between;
+  background: var(--gh-surface); border:1px solid var(--gh-border); border-radius: 12px;
+  padding: .75rem 1rem; margin-bottom: 1rem; box-shadow: var(--gh-shadow);
+}
+.hud .hud-item{ font-weight:600; font-size:.95rem; }
+.hud .hud-item span{ color: var(--gh-primary); }
+
+.puzzle-grid{ display:grid; gap: 2px; margin: 0 auto; background: var(--gh-border); border: 2px solid var(--gh-text); width: fit-content; }
+.puzzle-cell{
+  display:flex; align-items:center; justify-content:center;
+  background: var(--gh-surface); color: var(--gh-text);
+  font-weight: 700; cursor:pointer; user-select:none;
+}
+.puzzle-cell.fixed{ background: var(--gh-border); cursor:not-allowed; }
+.puzzle-cell.selected{ outline: 2px solid var(--gh-primary); outline-offset:-2px; }
+.puzzle-cell.error{ background: #ffd6d6; color:#c0392b; }
+.puzzle-cell.correct-flash{ background:#d6ffe0; }
+
+.num-pad{ display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; margin-top:1rem; }
+.num-pad button{ min-width: 44px; }
+
+.result-emoji{ font-size: 3rem; }
+.stars{ font-size: 1.6rem; letter-spacing: 3px; }
+
+.board-cell-r0{ border-right: 2px solid var(--gh-text) !important; }
+.board-cell-b0{ border-bottom: 2px solid var(--gh-text) !important; }
+
+/* Snakes & Ladders / Ludo */
+.sl-board{ display:grid; gap: 1px; background: var(--gh-border); border: 2px solid var(--gh-text); width: fit-content; margin: 0 auto; }
+.sl-cell{ width: 42px; height: 42px; font-size: .65rem; display:flex; align-items:flex-start; justify-content:flex-end;
+  padding:2px; background: var(--gh-surface); position:relative; }
+.token{ width:16px; height:16px; border-radius:50%; display:inline-block; border: 1px solid #0003; }
+.token-row{ position:absolute; bottom:1px; left:1px; display:flex; gap:1px; }
+
+.ludo-board{ width: 480px; max-width: 90vw; margin: 0 auto; aspect-ratio: 1/1; position:relative; background: var(--gh-surface); border: 2px solid var(--gh-text); }
+
+/* ---- Page background images ---- */
+:root{ --page-overlay: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0)); }
+[data-theme="dark"]{ --page-overlay: linear-gradient(rgba(6,8,16,0.55), rgba(6,8,16,0.55)); }
+
+body[class*="page-"]{
+  background-image: var(--page-overlay), var(--page-bg);
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  background-attachment: fixed, fixed;
+  background-position: center, center;
+}
+
+.page-home     { --page-bg: url('/static/images/2.png'); }
+.page-sudoku{ --page-bg: url('/static/images/3.png'); }
+.page-nonogram{ --page-bg: url('/static/images/6.png'); }
+.page-tango{ --page-bg: url('/static/images/3.png'); }
+.page-queens{ --page-bg: url('/static/images/bg-queens.svg'); }
+.page-snakes{ --page-bg: url('/static/images/bg-snakes.svg'); }
+.page-ludo{ --page-bg: url('/static/images/4.png'); }
+.page-chess{ --page-bg: url('/static/images/chess.png'); }
+
+[data-theme="dark"] .page-home{ --page-bg: url('/static/images/bg-home-dark.svg'); }
+[data-theme="dark"] .page-sudoku{ --page-bg: url('/static/images/bg-sudoku-dark.svg'); }
+[data-theme="dark"] .page-nonogram{ --page-bg: url('/static/images/bg-nonogram-dark.svg'); }
+[data-theme="dark"] .page-tango{ --page-bg: url('/static/images/bg-tango-dark.svg'); }
+[data-theme="dark"] .page-queens{ --page-bg: url('/static/images/bg-queens-dark.svg'); }
+[data-theme="dark"] .page-snakes{ --page-bg: url('/static/images/bg-snakes-dark.svg'); }
+[data-theme="dark"] .page-ludo{ --page-bg: url('/static/images/bg-ludo-dark.svg'); }
+[data-theme="dark"] .page-chess{ --page-bg: url('/static/images/bg-chess-dark.svg'); }
