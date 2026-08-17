@@ -13,7 +13,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+# Debug mode is read here (module level) so it also takes effect when the
+# app is served by gunicorn/WSGI, not only under `python app.py`.
+app.debug = os.environ.get('FLASK_DEBUG', '0') == '1'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'gamehub.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -512,4 +515,10 @@ def create_db():
 
 if __name__ == '__main__':
     create_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
+else:
+    # Also make sure the DB + seeded user exist when run under a WSGI
+    # server (gunicorn, PythonAnywhere, etc.) where __main__ never runs.
+    create_db()
