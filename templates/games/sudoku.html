@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Sudoku - Play{% endblock %}
+{% block body_class %}page-sudoku{% endblock %}
+{% block content %}
+{% include 'games/_hud.html' %}
+
+<div class="text-center position-relative">
+  <div id="grid" class="puzzle-grid"></div>
+  <div id="overlay" class="d-none" style="position:absolute; inset:0; background:rgba(0,0,0,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.4rem; border-radius:8px;">Paused</div>
+</div>
+
+<div class="num-pad" id="numPad">
+  {% for n in range(1, size+1) %}
+  <button class="btn btn-outline-primary num-btn" data-val="{{ n }}">{{ n }}</button>
+  {% endfor %}
+  <button class="btn btn-outline-danger" id="eraseBtn"><i class="bi bi-eraser"></i></button>
+</div>
+
+{% include 'games/_controls.html' %}
+{% include 'games/_complete_modal.html' %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/sudoku.js') }}"></script>
+<script>
+initSudoku({
+  size: {{ size }},
+  difficulty: "{{ difficulty }}",
+  game: "sudoku",
+  daily: {{ 'true' if daily else 'false' }},
+  seed: {{ (seed | tojson) if seed else 'null' }}
+});
+</script>
+{% endblock %}

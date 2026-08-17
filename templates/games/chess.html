@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Chess - Play{% endblock %}
+{% block body_class %}page-chess{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+  <h4 class="mb-0">♟️ Chess <span class="badge bg-secondary">{{ mode }}</span>
+    <span class="badge" style="background:{{ '#333' if color=='black' else '#f5f5f5' }}; color:{{ '#fff' if color=='black' else '#333' }}; border:1px solid #8886;">You: {{ color|capitalize }}</span>
+    {% if daily %}<span class="badge bg-warning text-dark">Daily Challenge</span>{% endif %}
+  </h4>
+</div>
+
+<div class="hud">
+  <div class="hud-item" id="statusText">Turn: -</div>
+  <div class="hud-item">💡 Hints Remaining: <span id="hintsVal">5</span></div>
+  <div class="hud-item">⏱ Time: <span id="timeVal">00:00</span></div>
+</div>
+
+<div class="row g-3 mb-2">
+  <div class="col-6">
+    <div class="small text-muted">Captured by White</div>
+    <div id="capturedWhite" style="font-size:1.4rem; min-height:1.8rem;"></div>
+  </div>
+  <div class="col-6 text-end">
+    <div class="small text-muted">Captured by Black</div>
+    <div id="capturedBlack" style="font-size:1.4rem; min-height:1.8rem;"></div>
+  </div>
+</div>
+
+<div class="text-center">
+  <div id="board"></div>
+  <div class="mt-3 d-flex gap-2 justify-content-center">
+    <button id="hintBtn" class="btn btn-outline-primary btn-sm">💡 Hint</button>
+    <button id="resignBtn" class="btn btn-outline-warning btn-sm">🏳️ Resign</button>
+    <button id="exitBtn" class="btn btn-outline-danger btn-sm">Exit</button>
+  </div>
+</div>
+
+<div class="modal fade" id="promoModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content text-center">
+      <div class="modal-body p-4">
+        <h6 class="mb-3">Promote your pawn to:</h6>
+        <div id="promoOptions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'games/_complete_modal_board.html' %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/chess-engine.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chess.js') }}"></script>
+<script>
+initChess({
+  game: "chess", mode: "{{ mode }}", color: "{{ color }}",
+  daily: {{ 'true' if daily else 'false' }}
+});
+</script>
+{% endblock %}

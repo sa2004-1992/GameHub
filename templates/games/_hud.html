@@ -1,0 +1,13 @@
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+  <h4 class="mb-0">{{ info.icon }} {{ info.name }} — {{ size }}×{{ size }} <span class="badge bg-secondary">{{ difficulty }}</span>
+    {% if daily %}<span class="badge bg-warning text-dark">Daily Challenge</span>{% endif %}
+  </h4>
+</div>
+<p class="text-muted mb-2">Welcome, {{ current_user.full_name }}</p>
+
+<div class="hud">
+  <div class="hud-item">⏱ Time: <span id="timeVal">00:00</span></div>
+  <div class="hud-item">💡 Hints Remaining: <span id="hintsVal">5</span></div>
+  <div class="hud-item">🏆 Score: <span id="scoreVal">0</span></div>
+</div>

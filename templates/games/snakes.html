@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Snakes & Ladders - Play{% endblock %}
+{% block body_class %}page-snakes{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+  <h4 class="mb-0">🐍 Snakes &amp; Ladders <span class="badge bg-secondary">{{ mode }}</span>
+    {% if daily %}<span class="badge bg-warning text-dark">Daily Challenge</span>{% endif %}
+  </h4>
+</div>
+
+<div class="hud">
+  <div class="hud-item" id="statusText">Turn: -</div>
+  <div class="hud-item">⏱ Time: <span id="timeVal">00:00</span></div>
+  <div class="hud-item" id="playersInfo"></div>
+</div>
+
+<div class="text-center">
+  <div id="board"></div>
+  <div class="mt-3">
+    <div class="display-4 mb-2" id="diceVal">🎲</div>
+    <button class="btn btn-primary" id="rollBtn"><i class="bi bi-dice-5"></i> Roll Dice</button>
+    <button id="exitBtn" class="btn btn-outline-danger">Exit</button>
+  </div>
+</div>
+
+{% include 'games/_complete_modal_board.html' %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/snakes.js') }}"></script>
+<script>
+initSnakes({
+  game: "snakes", mode: "{{ mode }}", daily: {{ 'true' if daily else 'false' }},
+  colors: {{ (colors | tojson) if colors else 'null' }}
+});
+</script>
+{% endblock %}
