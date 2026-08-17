@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Home - GameHub{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% block content %}
+<div class="text-center mb-4">
+  <h2 class="fw-bold">Welcome, {{ current_user.full_name }}! 👋</h2>
+  <p class="text-muted">🎮 Entertainment Games</p>
+</div>
+
+<div class="card daily-card mb-4">
+  <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <h4 class="mb-1">🌟 Daily Challenge — {{ today.strftime('%B %d, %Y') }}</h4>
+      <p class="mb-0 text-muted">One puzzle per game, every day. Complete all {{ games|length }} for bonus bragging rights!</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for key, info in games.items() %}
+      <a href="{{ url_for('game_rules', game=key, daily=1) }}"
+         class="btn btn-sm {{ 'btn-success' if daily_status[key] else 'btn-outline-warning' }}">
+        {{ info.icon }} {{ info.name }} {% if daily_status[key] %}<i class="bi bi-check-circle-fill"></i>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<h5 id="games" class="fw-bold mb-3">Choose a Game</h5>
+<div class="row g-3">
+  {% for key, info in games.items() %}
+  <div class="col-6 col-md-4 col-lg-2">
+    <a href="{{ url_for('game_rules', game=key) }}" class="text-decoration-none">
+      <div class="card game-tile h-100 text-center">
+        <div class="card-body">
+          <div class="game-tile-icon">{{ info.icon }}</div>
+          <div class="fw-semibold text-body">{{ info.name }}</div>
+          <div class="small text-muted">{{ info.tagline }}</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-md-6">
+    <a href="{{ url_for('history') }}" class="text-decoration-none">
+      <div class="card p-3 quick-link"><i class="bi bi-clock-history"></i> 📜 My History</div>
+    </a>
+  </div>
+  <div class="col-md-6">
+    <a href="{{ url_for('leaderboard') }}" class="text-decoration-none">
+      <div class="card p-3 quick-link"><i class="bi bi-trophy"></i> 🏆 Leaderboard</div>
+    </a>
+  </div>
+</div>
+{% endblock %}

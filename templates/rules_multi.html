@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% block title %}{{ info.name }} - Rules{% endblock %}
+{% block body_class %}page-{{ game }}{% endblock %}
+{% block content %}
+<div class="wizard-wrap mx-auto">
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+    <h3 class="mb-0">{{ info.icon }} {{ info.name }} {% if daily %}<span class="badge bg-warning text-dark">Daily Challenge</span>{% endif %}</h3>
+  </div>
+
+  <div class="step-indicator mb-4">
+    <span class="step active" data-step="1">1. Rules</span>
+    <span class="step" data-step="2">2. {{ 'Mode' if is_chess else 'Players' }}</span>
+    <span class="step" data-step="3">3. Colors</span>
+  </div>
+
+  <div class="card step-panel" data-panel="1">
+    <div class="card-body">
+      <h5 class="card-title">📖 Rules &amp; How to Play</h5>
+      <ol class="rules-list">
+        {% for r in info.rules %}<li>{{ r }}</li>{% endfor %}
+      </ol>
+      <button class="btn btn-primary" onclick="goStep(2)">Continue <i class="bi bi-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <div class="card step-panel d-none" data-panel="2">
+    <div class="card-body">
+      <h5 class="card-title">👥 {{ 'Select Mode' if is_chess else 'Select Players' }}</h5>
+      <div class="d-flex flex-wrap gap-2">
+        {% for m in modes %}
+        <button class="btn btn-outline-primary mode-btn" data-mode="{{ m }}" onclick="selectMode('{{ m }}', this)">{{ m }}</button>
+        {% endfor %}
+      </div>
+      <div class="mt-4">
+        <button class="btn btn-secondary" onclick="goStep(1)"><i class="bi bi-arrow-left"></i> Back</button>
+        <button class="btn btn-primary" id="toStep3" disabled onclick="buildColorStep()">Continue <i class="bi bi-arrow-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card step-panel d-none" data-panel="3">
+    <div class="card-body">
+      <h5 class="card-title">🎨 {{ 'Choose Your Color' if is_chess else 'Choose Player Colors' }}</h5>
+      <p class="text-muted small" id="colorHint"></p>
+      <div id="colorSlots"></div>
+      <div class="mt-4">
+        <button class="btn btn-secondary" onclick="goStep(2)"><i class="bi bi-arrow-left"></i> Back</button>
+        <button class="btn btn-success" id="startBtn" disabled onclick="startGame()">▶️ Start {{ info.name }}</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const IS_CHESS = {{ 'true' if is_chess else 'false' }};
+const COLOR_OPTIONS = {{ color_options | tojson }};
+let chosenMode = null;
+let slotColors = [];   // chosen color id per slot, null = unset
+let slotLocked = [];   // true if slot cannot be changed (computer)
+let slotLabels = [];
+
+function goStep(n){
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.add('d-none'));
+  document.querySelector(`.step-panel[data-panel="${n}"]`).classList.remove('d-none');
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.add('active');
+}
+
+function selectMode(mode, btn){
+  chosenMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-choice'));
+  btn.classList.add('active-choice');
+  document.getElementById('toStep3').disabled = false;
+}
+
+function styleSwatch(btn, hex, selected){
+  if(selected){
+    btn.style.background = hex;
+    btn.style.color = (hex === '#f1c40f' || hex === '#f5f5f5') ? '#222' : '#fff';
+    btn.style.borderColor = hex;
+    btn.style.fontWeight = '700';
+  } else {
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = hex;
+    btn.style.fontWeight = '';
+  }
+}
+
+function buildColorStep(){
+  const wrap = document.getElementById('colorSlots');
+  const hint = document.getElementById('colorHint');
+  wrap.innerHTML = '';
+  slotColors = []; slotLocked = []; slotLabels = [];
+
+  if(IS_CHESS){
+    hint.textContent = 'Pick which side you want to play.';
+    let chosen = 'white';
+    const row = document.createElement('div');
+    row.className = 'd-flex gap-2';
+    COLOR_OPTIONS.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-outline-dark color-swatch-btn';
+      styleSwatch(b, c.hex, c.id === 'white');
+      b.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.hex};border:1px solid #8886;vertical-align:middle;margin-right:6px;"></span>${c.label}`;
+      b.addEventListener('click', () => {
+        row.querySelectorAll('button').forEach((x,xi) => styleSwatch(x, COLOR_OPTIONS[xi].hex, false));
+        styleSwatch(b, c.hex, true);
+        chosen = c.id;
+        slotColors = [chosen];
+        document.getElementById('startBtn').disabled = false;
+      });
+      row.appendChild(b);
+    });
+    wrap.appendChild(row);
+    slotColors = [chosen];
+    document.getElementById('startBtn').disabled = false;
+    goStep(3);
+    return;
+  }
+
+  // Snakes & Ladders / Ludo
+  const isVsComputer = chosenMode === 'Vs Computer';
+  const n = isVsComputer ? 2 : parseInt(chosenMode);
+
+  if(n >= 4){
+    // all 4 colors are used - nothing to choose, auto-assign fixed order
+    slotColors = COLOR_OPTIONS.slice(0,4).map(c => c.id);
+    hint.textContent = 'All 4 colors are in play — Red, Green, Yellow, Blue.';
+    document.getElementById('startBtn').disabled = false;
+    goStep(3);
+    return;
+  }
+
+  hint.textContent = isVsComputer
+    ? 'Pick your color — your opponent is placed diagonally opposite for a fair game.'
+    : 'Pick Player 1\'s color — Player 2 is placed diagonally opposite for a fairer game.';
+
+  const DIAGONAL = {red:'yellow', yellow:'red', green:'blue', blue:'green'};
+
+  if(n === 2){
+    // Both "2 Players" and "Vs Computer" always play diagonally opposite corners.
+    slotLabels = ['Player 1', isVsComputer ? 'Computer' : 'Player 2'];
+    slotLocked = [false, true];
+    slotColors = ['red', DIAGONAL['red']];
+
+    slotColors.forEach((_, i) => {
+      const row = document.createElement('div');
+      row.className = 'mb-3';
+      const label = document.createElement('div');
+      label.className = 'small fw-semibold mb-1';
+      label.textContent = slotLabels[i] + (slotLocked[i] ? ' (diagonal — fixed)' : '');
+      row.appendChild(label);
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'd-flex gap-2 flex-wrap';
+      row.appendChild(btnRow);
+      wrap.appendChild(row);
+    });
+
+    function renderSlot0(){
+      const btnRow = wrap.children[0].querySelector('.d-flex');
+      btnRow.innerHTML = '';
+      COLOR_OPTIONS.forEach(c => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-outline-secondary btn-sm color-swatch-btn';
+        styleSwatch(b, c.hex, slotColors[0] === c.id);
+        b.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c.hex};border:1px solid #8886;vertical-align:middle;margin-right:5px;"></span>${c.label}`;
+        b.addEventListener('click', () => {
+          slotColors[0] = c.id;
+          slotColors[1] = DIAGONAL[c.id];
+          renderSlot0(); renderSlot1();
+        });
+        btnRow.appendChild(b);
+      });
+    }
+    function renderSlot1(){
+      const btnRow = wrap.children[1].querySelector('.d-flex');
+      btnRow.innerHTML = '';
+      COLOR_OPTIONS.forEach(c => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-outline-secondary btn-sm color-swatch-btn';
+        styleSwatch(b, c.hex, slotColors[1] === c.id);
+        b.disabled = true;
+        btnRow.appendChild(b);
+      });
+    }
+    renderSlot0(); renderSlot1();
+
+    document.getElementById('startBtn').disabled = false;
+    goStep(3);
+    return;
+  }
+
+  // 3 players: no diagonal constraint (odd number can't pair up), simple distinct picks
+  const defaults = ['red','green','yellow'];
+  for(let i=0;i<n;i++){
+    slotLabels.push(isVsComputer && i===1 ? 'Computer' : `Player ${i+1}`);
+    slotLocked.push(isVsComputer && i===1);
+    slotColors.push(isVsComputer && i===1 ? 'green' : (defaults[i] || COLOR_OPTIONS[i].id));
+  }
+
+  slotColors.forEach((_, i) => {
+    const row = document.createElement('div');
+    row.className = 'mb-3';
+    const label = document.createElement('div');
+    label.className = 'small fw-semibold mb-1';
+    label.textContent = slotLabels[i] + (slotLocked[i] ? ' (fixed)' : '');
+    row.appendChild(label);
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'd-flex gap-2 flex-wrap';
+    COLOR_OPTIONS.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const isSelected = slotColors[i] === c.id;
+      b.className = 'btn btn-outline-secondary btn-sm color-swatch-btn';
+      styleSwatch(b, c.hex, isSelected);
+      b.disabled = slotLocked[i];
+      b.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c.hex};border:1px solid #8886;vertical-align:middle;margin-right:5px;"></span>${c.label}`;
+      b.addEventListener('click', () => {
+        if(slotLocked[i]) return;
+        if(slotColors.includes(c.id) && slotColors[i] !== c.id) return;
+        slotColors[i] = c.id;
+        btnRow.querySelectorAll('button').forEach((x,xi) => { if(!x.disabled) styleSwatch(x, COLOR_OPTIONS[xi].hex, false); });
+        styleSwatch(b, c.hex, true);
+      });
+      btnRow.appendChild(b);
+    });
+    row.appendChild(btnRow);
+    wrap.appendChild(row);
+  });
+
+  document.getElementById('startBtn').disabled = false;
+  goStep(3);
+}
+
+function startGame(){
+  const daily = {{ 'true' if daily else 'false' }};
+  let url;
+  if(IS_CHESS){
+    url = `{{ url_for('game_play', game=game) }}?mode=${encodeURIComponent(chosenMode)}&color=${slotColors[0]}${daily ? '&daily=1' : ''}`;
+  } else {
+    url = `{{ url_for('game_play', game=game) }}?mode=${encodeURIComponent(chosenMode)}&colors=${slotColors.join(',')}${daily ? '&daily=1' : ''}`;
+  }
+  window.location.href = url;
+}
+</script>
+{% endblock %}

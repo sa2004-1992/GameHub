@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Leaderboard - GameHub{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+  <h3 class="mb-0">🏆 Leaderboard</h3>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>#</th><th>Player</th><th>Total Score</th><th>Games Played</th></tr></thead>
+      <tbody>
+        {% for username, total_score, games_played in rows %}
+        <tr class="{{ 'table-warning' if username == current_user.username else '' }}">
+          <td>{{ loop.index }}</td>
+          <td>{{ username }}{% if username == current_user.username %} <span class="badge bg-primary">You</span>{% endif %}</td>
+          <td>{{ total_score }}</td>
+          <td>{{ games_played }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted py-4">No scores yet — be the first!</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
