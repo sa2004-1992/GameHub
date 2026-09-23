@@ -1,9 +1,9 @@
 # 🎮 GameHub — Entertainment Games Website
 
 A full-stack Flask web app with **7 playable games** — Sudoku, Nonogram,
-Tango, Queens, Snakes & Ladders, Ludo, and Chess — built for a single
-private user, with daily challenges, live scoring, score/history tracking,
-a leaderboard, and dark/light theme.
+Tango, Queens, Snakes & Ladders, Ludo, and Chess — with accounts,
+daily challenges, live scoring, score/history tracking, a leaderboard,
+and dark/light theme.
 
 Everything is self-contained — Bootstrap/Bootstrap Icons are vendored
 locally in `static/vendor` and all page backgrounds are local SVG files
@@ -11,16 +11,43 @@ in `static/images`, so **no internet connection is required** to run or
 use the site (only the login page's Google Font loads from the web, and
 falls back to a system font if offline).
 
-## 🔐 Login
+## 🔐 Login & Sign up
 
-This is a single-user site — there is no public registration. Sign in with:
+Anyone can create their own account from the **Signup** side of the login
+page (flip card — click "Signup" / "Sign in" to flip between them).
+Signup only asks for a full name, username, and password.
 
-- **Username:** -------------
-- **Email:** ---------------------
-- **Password:** ------------
+A default account is also seeded automatically the first time the app runs:
 
-The account is seeded automatically the first time the app runs. You can
-change the password any time from the **Profile** page.
+- **Username:** `sagar123`
+- **Password:** `sagar123`
+
+You can change any account's password from the **Profile** page.
+
+## 💾 Persistent history (important for deployment)
+
+By default the app uses a local SQLite file (`instance/gamehub.db`).
+That's fine for local use, but **on most free hosts (e.g. Render's free
+tier) the filesystem is wiped every time the app restarts/sleeps**,
+which deletes all accounts and game history.
+
+To keep history permanently on a host like that, set an environment
+variable **`DATABASE_URL`** pointing at a real Postgres database — the
+app will automatically use it instead of SQLite. A free, permanent
+Postgres database (2 minutes to set up, no credit card):
+
+1. Go to **neon.tech** → sign up → **Create a project**.
+2. Copy the **connection string** it gives you (starts with `postgresql://`).
+3. On your host (e.g. Render → your service → **Environment** tab), add:
+   - Key: `DATABASE_URL`
+   - Value: *(paste the Neon connection string)*
+4. Redeploy. From then on, every signup, login, and game result is saved
+   permanently in that database — restarts, sleeps, and redeploys no
+   longer erase anything.
+
+If `DATABASE_URL` isn't set, the app just uses local SQLite as before —
+nothing else changes, and this works with zero configuration for local
+development.
 
 ## ✅ What's included
 
@@ -70,6 +97,13 @@ change the password any time from the **Profile** page.
    error, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
    first, then activate as normal.
 
+   **Mac/Linux:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
 3. Run the app:
 
    ```bash
@@ -104,7 +138,7 @@ gamehub/
 │   │   └── chess.js           # board UI + click-to-move + AI + hints
 │   └── vendor/                # Bootstrap + Bootstrap Icons (vendored, offline)
 └── templates/
-    ├── base.html, login.html (autumn-themed, single-user), home.html
+    ├── base.html, login.html (autumn-themed, flip-card login/signup), home.html
     ├── rules_solo.html        # Rules → Size → Difficulty (4 puzzle games)
     ├── rules_multi.html       # Rules → Mode → Colors (Snakes, Ludo, Chess)
     ├── history.html, profile.html (incl. Change Password modal), leaderboard.html
