@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Zip - Play{% endblock %}
+{% block body_class %}page-zip{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+  <h4 class="mb-0">{{ info.icon }} {{ info.name }} — {{ size }}×{{ size }} <span class="badge bg-secondary">{{ difficulty }}</span>
+    {% if daily %}<span class="badge bg-warning text-dark">Daily Challenge</span>{% endif %}
+  </h4>
+</div>
+<p class="text-muted mb-2">Welcome, {{ current_user.full_name }}</p>
+
+<div class="hud">
+  <div class="hud-item">⏱ Time: <span id="timeVal">00:00</span></div>
+  <div class="hud-item">💡 Hints Remaining: <span id="hintsVal">10</span></div>
+  <div class="hud-item">🧩 Progress: <span id="progressVal">0/0</span></div>
+  <div class="hud-item">🏆 Score: <span id="scoreVal">0</span></div>
+</div>
+
+<p class="text-center text-muted small mb-2" id="zipMsg">Start at cell 1, then drag or click adjacent cells to connect 1 → 2 → 3 → ... and fill the whole board.</p>
+
+<div class="text-center position-relative">
+  <div id="grid"></div>
+  <div id="overlay" class="d-none" style="position:absolute; inset:0; background:rgba(0,0,0,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.4rem; border-radius:8px;">Paused</div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+  <button id="hintBtn" class="btn btn-outline-warning btn-sm"><i class="bi bi-lightbulb"></i> Hint</button>
+  <button id="pauseBtn" class="btn btn-outline-secondary btn-sm">⏸ Pause</button>
+  <button id="restartBtn" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-repeat"></i> Restart</button>
+  <button id="exitBtn" class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-left"></i> Exit</button>
+</div>
+
+{% include 'games/_complete_modal.html' %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/zip.js') }}"></script>
+<script>
+initZip({
+  size: {{ size }},
+  difficulty: "{{ difficulty }}",
+  game: "zip",
+  daily: {{ 'true' if daily else 'false' }},
+  seed: {{ (seed | tojson) if seed else 'null' }}
+});
+</script>
+{% endblock %}

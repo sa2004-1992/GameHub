@@ -2,9 +2,10 @@
 {% block title %}Chess - Play{% endblock %}
 {% block body_class %}page-chess{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center gap-2 mb-2">
+<div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
   <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
   <h4 class="mb-0">♟️ Chess <span class="badge bg-secondary">{{ mode }}</span>
+    {% if mode == 'Vs Computer' %}<span class="badge bg-success">{{ chess_difficulty }}</span>{% endif %}
     <span class="badge" style="background:{{ '#333' if color=='black' else '#f5f5f5' }}; color:{{ '#fff' if color=='black' else '#333' }}; border:1px solid #8886;">You: {{ color|capitalize }}</span>
     {% if daily %}<span class="badge bg-warning text-dark">Daily Challenge</span>{% endif %}
   </h4>
@@ -14,6 +15,7 @@
   <div class="hud-item" id="statusText">Turn: -</div>
   <div class="hud-item">💡 Hints Remaining: <span id="hintsVal">5</span></div>
   <div class="hud-item">⏱ Time: <span id="timeVal">00:00</span></div>
+  <div class="hud-item">🏆 Score: <span id="scoreVal">0</span></div>
 </div>
 
 <div class="row g-3 mb-2">
@@ -27,12 +29,26 @@
   </div>
 </div>
 
-<div class="text-center">
-  <div id="board"></div>
-  <div class="mt-3 d-flex gap-2 justify-content-center">
-    <button id="hintBtn" class="btn btn-outline-primary btn-sm">💡 Hint</button>
-    <button id="resignBtn" class="btn btn-outline-warning btn-sm">🏳️ Resign</button>
-    <button id="exitBtn" class="btn btn-outline-danger btn-sm">Exit</button>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="text-center">
+      <div id="board"></div>
+      <div class="mt-3 d-flex gap-2 justify-content-center">
+        <button id="hintBtn" class="btn btn-outline-primary btn-sm">💡 Hint</button>
+        <button id="resignBtn" class="btn btn-outline-warning btn-sm">🏳️ Resign</button>
+        <button id="exitBtn" class="btn btn-outline-danger btn-sm">Exit</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-title mb-2">📜 Move History</h6>
+        <div id="moveHistoryList" style="max-height:420px; overflow-y:auto;">
+          <div class="text-muted small">No moves yet.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -55,6 +71,8 @@
 <script>
 initChess({
   game: "chess", mode: "{{ mode }}", color: "{{ color }}",
+  difficulty: "{{ chess_difficulty }}",
+  names: {{ (names | tojson) if names else 'null' }},
   daily: {{ 'true' if daily else 'false' }}
 });
 </script>

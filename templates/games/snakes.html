@@ -31,7 +31,8 @@
 <script>
 initSnakes({
   game: "snakes", mode: "{{ mode }}", daily: {{ 'true' if daily else 'false' }},
-  colors: {{ (colors | tojson) if colors else 'null' }}
+  colors: {{ (colors | tojson) if colors else 'null' }},
+  names: {{ (names | tojson) if names else 'null' }}
 });
 </script>
 {% endblock %}

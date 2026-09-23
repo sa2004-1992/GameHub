@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Quiz - Play{% endblock %}
+{% block body_class %}page-quiz{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+  <h4 class="mb-0">{{ info.icon }} Quiz
+    {% if daily %}
+      <span class="badge bg-warning text-dark">🌟 Daily Quiz</span>
+    {% else %}
+      <span class="badge bg-secondary">{{ category_info.icon }} {{ category_info.name }}</span>
+    {% endif %}
+  </h4>
+</div>
+
+<div class="hud">
+  <div class="hud-item">❓ Question: <span id="qNumVal">0</span></div>
+  <div class="hud-item">⏱ Time: <span id="timeVal">00:00</span></div>
+  <div class="hud-item">💡 Hints Remaining: <span id="hintsVal">{{ 5 if daily else 20 }}</span></div>
+  <div class="hud-item">✅ Correct: <span id="correctVal">0</span></div>
+  <div class="hud-item">❌ Wrong: <span id="wrongVal">0</span></div>
+  <div class="hud-item">🏆 Score: <span id="scoreVal">0</span></div>
+</div>
+
+<div class="card mx-auto" style="max-width:640px;">
+  <div class="card-body">
+    <h5 id="questionText" class="mb-3">Loading question…</h5>
+    <div id="optionsWrap"></div>
+    <div id="feedbackText" class="fs-5 mb-2"></div>
+    <div id="solutionText" class="alert alert-light border small d-none"></div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <button id="hintBtn" class="btn btn-outline-warning btn-sm">💡 Hint</button>
+      <button id="checkSolutionBtn" class="btn btn-outline-info btn-sm" disabled>📖 Check Solution</button>
+      <button id="nextBtn" class="btn btn-primary btn-sm" disabled>Next Question ➜</button>
+      {% if not daily %}
+      <button id="finishBtn" class="btn btn-success btn-sm ms-auto">🏁 Finish &amp; Save</button>
+      <button id="exitBtn" class="btn btn-outline-secondary btn-sm">🚪 Exit Without Saving</button>
+      {% else %}
+      <button id="exitBtn" class="btn btn-outline-secondary btn-sm ms-auto">🚪 Exit Without Saving</button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="completeModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center">
+      <div class="modal-body p-4">
+        <div class="result-emoji mb-2">🧠</div>
+        <h4 class="fw-bold">{{ 'Daily Quiz Completed!' if daily else 'Quiz Session Completed' }}</h4>
+        <p class="text-muted">Your progress has been saved.</p>
+        <div class="row g-2 my-3">
+          <div class="col-6"><div class="card p-2"><div class="small text-muted">Time</div><div class="fw-bold" id="finalTime">-</div></div></div>
+          <div class="col-6"><div class="card p-2"><div class="small text-muted">Score</div><div class="fw-bold" id="finalScore">-</div></div></div>
+          <div class="col-12"><div class="card p-2"><div class="small text-muted">Hints Used</div><div class="fw-bold" id="finalHints">-</div></div></div>
+        </div>
+        <div class="stars mb-3" id="finalStars">⭐⭐⭐</div>
+        <div class="d-flex gap-2 justify-content-center">
+          {% if not daily %}
+          <button class="btn btn-primary" onclick="window.location.reload()">Play Again</button>
+          {% endif %}
+          <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+<script>
+initQuiz({
+  game: "quiz",
+  category: {{ (category | tojson) if category else 'null' }},
+  categoryName: {{ (category_info.name | tojson) if category_info else 'null' }},
+  daily: {{ 'true' if daily else 'false' }},
+  dailyQuestions: {{ (daily_questions | tojson) if daily_questions else 'null' }},
+  dailyTotal: {{ daily_total | tojson }}
+});
+</script>
+{% endblock %}
