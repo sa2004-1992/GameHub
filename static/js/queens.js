@@ -163,14 +163,28 @@ function initQueens(cfg){
     isDragging = false;
   });
 
+  function queenCausesConflict(r, c){
+    // Local Queens rule check against currently-placed queens only —
+    // trying a square and it not working out is not automatically a
+    // mistake; only an actual rule violation (row/col/region/touching) is.
+    for(let rr=0; rr<size; rr++){
+      for(let cc=0; cc<size; cc++){
+        if(rr===r && cc===c) continue;
+        if(board[rr][cc] !== 2) continue;
+        if(rr===r || cc===c || regions[rr][cc]===regions[r][c]) return true;
+        if(Math.abs(rr-r)<=1 && Math.abs(cc-c)<=1) return true;
+      }
+    }
+    return false;
+  }
+
   function cycleCell(r, c){
     if(paused || gameOver) return;
     history.push({r,c,prev:board[r][c]});
-    const wasQueen = board[r][c] === 2;
     board[r][c] = (board[r][c]+1) % 3;
     if(board[r][c] === 2){
-      if(solution[r] === c){ score += 15; flashCell=[r,c]; flashKind='ok'; }
-      else { mistakes++; score = Math.max(0, score-8); flashCell=[r,c]; flashKind='bad'; }
+      if(!queenCausesConflict(r,c)){ score += 15; flashCell=[r,c]; flashKind='ok'; }
+      else { mistakes++; flashCell=[r,c]; flashKind='bad'; }
     }
     render();
     setTimeout(() => { flashCell = null; render(); }, 350);
@@ -204,7 +218,6 @@ function initQueens(cfg){
         for(let c=0;c<size;c++) if(board[r][c]===2) board[r][c]=0;
         board[r][solution[r]] = 2;
         hintsUsed++;
-        score = Math.max(0, score-8);
         render(); checkComplete();
         return;
       }
@@ -234,8 +247,8 @@ function initQueens(cfg){
     else if(e.key.toLowerCase() === 'q'){
       history.push({r,c,prev:board[r][c]});
       board[r][c] = 2;
-      if(solution[r] === c){ score += 15; flashCell=[r,c]; flashKind='ok'; }
-      else { mistakes++; score = Math.max(0, score-8); flashCell=[r,c]; flashKind='bad'; }
+      if(!queenCausesConflict(r,c)){ score += 15; flashCell=[r,c]; flashKind='ok'; }
+      else { mistakes++; flashCell=[r,c]; flashKind='bad'; }
       render();
       setTimeout(() => { flashCell = null; render(); }, 350);
       checkComplete();
@@ -268,7 +281,7 @@ function initQueens(cfg){
     if(gameOver) return;
     gameOver = true;
     clearInterval(timerId);
-    score += Math.max(0, 200 - seconds);
+    score += 250; // win bonus
     document.getElementById('finalTime').textContent = ghFormatTime(seconds);
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalHints').textContent = hintsUsed;

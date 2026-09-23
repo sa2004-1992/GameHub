@@ -74,7 +74,7 @@ function initNonogram(cfg){
     if(countScore && val !== 0){
       const correct = (val===1 && solution[r][c]===1) || (val===2 && solution[r][c]===0);
       if(correct){ score += 10; flashCell=[r,c]; flashKind='ok'; }
-      else { mistakes++; score = Math.max(0, score-5); flashCell=[r,c]; flashKind='bad'; }
+      else { mistakes++; flashCell=[r,c]; flashKind='bad'; }
     }
   }
 
@@ -189,7 +189,6 @@ function initNonogram(cfg){
     for(let r=0;r<size;r++) for(let c=0;c<size;c++){
       if(solution[r][c]===1 && board[r][c]!==1){
         board[r][c]=1; hintsUsed++;
-        score = Math.max(0, score-5);
         buildTable(); checkComplete(); return;
       }
     }
@@ -240,7 +239,7 @@ function initNonogram(cfg){
     if(gameOver) return;
     gameOver = true;
     clearInterval(timerId);
-    score += Math.max(0, 200 - seconds);
+    score += 250; // win bonus
     document.getElementById('finalTime').textContent = ghFormatTime(seconds);
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalHints').textContent = hintsUsed;

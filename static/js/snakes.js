@@ -62,7 +62,7 @@ function generateSnakesAndLadders(){
 }
 
 function initSnakes(cfg){
-  const { game, mode, daily, colors } = cfg;
+  const { game, mode, daily, colors, names } = cfg;
   const { snakes: SL_SNAKES, ladders: SL_LADDERS } = generateSnakesAndLadders();
 
   let numPlayers = mode === 'Vs Computer' ? 2 : parseInt(mode);
@@ -70,8 +70,9 @@ function initSnakes(cfg){
   const chosenColors = (colors && colors.length === numPlayers) ? colors : SL_ORDER.slice(0, numPlayers);
 
   const players = Array.from({length:numPlayers}, (_,i) => ({
-    id: i, name: isVsComputer && i===1 ? 'Computer' : `Player ${i+1}`,
-    color: chosenColors[i], hex: SL_COLOR_HEX[chosenColors[i]], pos: 0,
+    id: i, name: (isVsComputer && i===1) ? 'Computer'
+                 : ((names && names[i]) ? names[i] : `Player ${i+1}`),
+    color: chosenColors[i], hex: SL_COLOR_HEX[chosenColors[i]], pos: 0, score: 0,
     isComputer: isVsComputer && i===1
   }));
 
@@ -203,7 +204,7 @@ function initSnakes(cfg){
       statusEl.innerHTML = `Turn: <span style="color:${players[current].hex}; font-weight:700;">${players[current].name} (${SL_NAMES[players[current].color]})</span>`;
     }
     document.getElementById('playersInfo').innerHTML = players.map(p =>
-      `<span class="badge" style="background:${p.hex}">${p.name}: ${p.pos}</span>`
+      `<span class="badge" style="background:${p.hex}">${p.name}: pos ${p.pos} · score ${p.score}</span>`
     ).join(' ');
     document.getElementById('timeVal').textContent = ghFormatTime(seconds);
   }
@@ -213,8 +214,11 @@ function initSnakes(cfg){
   function move(player, dice){
     let target = player.pos + dice;
     if(target > 100) return;
-    if(SL_SNAKES[target]) target = SL_SNAKES[target];
-    else if(SL_LADDERS[target]) target = SL_LADDERS[target];
+    // Only positive scoring: every valid move earns points, and climbing a
+    // ladder earns a bonus. Landing on a snake never subtracts points.
+    player.score += 10;
+    if(SL_LADDERS[target]){ target = SL_LADDERS[target]; player.score += 30; }
+    else if(SL_SNAKES[target]){ target = SL_SNAKES[target]; }
     player.pos = target;
     if(player.pos === 100){
       gameOver = true;
@@ -257,20 +261,20 @@ function initSnakes(cfg){
 
   function finishGame(){
     document.getElementById('statusText').innerHTML = `🏆 <span style="color:${winner.hex}">${winner.name}</span> Wins!`;
-    const score = Math.max(200, 1000 - seconds*2 - turns*5);
+    const isHumanWinner = !winner.isComputer;
+    const finalScore = isHumanWinner ? (winner.score + 250) : 0; // +250 win bonus, kept only if you won
     document.getElementById('finalTime').textContent = ghFormatTime(seconds);
-    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalScore').textContent = finalScore;
     document.getElementById('finalExtraLabel').textContent = 'Turns';
     document.getElementById('finalHints').textContent = turns;
     document.getElementById('finalExtra2Label').textContent = 'Result';
     document.getElementById('finalMistakes').textContent = winner.isComputer ? 'Lost' : 'Won';
-    document.getElementById('finalStars').textContent = ghStars(score);
+    document.getElementById('finalStars').textContent = ghStars(finalScore);
     document.querySelector('#completeModal h4').textContent = `🏆 ${winner.name} Wins!`;
     new bootstrap.Modal(document.getElementById('completeModal')).show();
-    const isHumanWinner = !winner.isComputer;
     ghSaveResult({
       game, mode, size: '-', difficulty: '-',
-      score, time_taken: seconds, mistakes: 0, hints_used: 0,
+      score: finalScore, time_taken: seconds, mistakes: 0, hints_used: 0,
       result: isHumanWinner ? 'Won' : 'Lost', daily
     });
   }

@@ -46,7 +46,7 @@ const YARD_ORIGIN = {
 };
 
 function initLudo(cfg){
-  const { game, mode, daily, colors } = cfg;
+  const { game, mode, daily, colors, names } = cfg;
   const isVsComputer = mode === 'Vs Computer';
   const numPlayers = isVsComputer ? 2 : parseInt(mode);
 
@@ -62,9 +62,10 @@ function initLudo(cfg){
   }
 
   const players = activeColors.map((color, i) => ({
-    color, name: isVsComputer && i>0 ? `Computer` : `Player ${i+1}`,
+    color, name: (isVsComputer && i>0) ? 'Computer'
+                 : ((names && names[i]) ? names[i] : `Player ${i+1}`),
     isComputer: isVsComputer && i>0,
-    captures: 0,
+    captures: 0, score: 0,
     tokens: [0,1,2,3].map(() => ({ state:'yard', ringPos:-1, homeStep:-1 }))
   }));
 
@@ -194,7 +195,7 @@ function initLudo(cfg){
       const yardCount = p.tokens.filter(t=>t.state==='yard').length;
       const homeCount = p.tokens.filter(t=>t.state==='home' && t.homeStep===5).length;
       const active = pi===current ? 'border:2px solid #1c2333;' : '';
-      return `<span class="badge me-1" style="background:${LUDO_COLORS[p.color]}; ${active}">${p.name} (${LUDO_NAMES[p.color]}): yard ${yardCount} · home ${homeCount}/4 · captures ${p.captures}</span>`;
+      return `<span class="badge me-1" style="background:${LUDO_COLORS[p.color]}; ${active}">${p.name} (${LUDO_NAMES[p.color]}): yard ${yardCount} · home ${homeCount}/4 · captures ${p.captures} · score ${p.score}</span>`;
     }).join(' ');
     document.getElementById('statusText').innerHTML = gameOver ? '' :
       `Turn: <span style="color:${LUDO_COLORS[players[current].color]}; font-weight:700;">${players[current].name} (${LUDO_NAMES[players[current].color]})</span>`;
@@ -210,6 +211,7 @@ function initLudo(cfg){
     if(t.state === 'yard'){
       t.state = 'ring';
       t.ringPos = START_OFFSET[p.color];
+      p.score += 10; // exiting the yard
     } else if(t.state === 'ring'){
       const traveled = stepsTraveled(t, p.color) + dice;
       if(traveled <= 50){
@@ -223,7 +225,10 @@ function initLudo(cfg){
     } else if(t.state === 'home'){
       t.homeStep += dice;
     }
-    if(t.state === 'home' && t.homeStep >= 5) t.homeStep = 5;
+    if(t.state === 'home' && t.homeStep >= 5){
+      t.homeStep = 5;
+      p.score += 40; // token reached home
+    }
   }
 
   function tryCapture(p, t){
@@ -234,6 +239,7 @@ function initLudo(cfg){
         if(ot.state === 'ring' && ot.ringPos === t.ringPos){
           ot.state = 'yard'; ot.ringPos = -1;
           p.captures++;
+          p.score += 30; // captured an opponent's token
         }
       });
     });
@@ -310,19 +316,20 @@ function initLudo(cfg){
 
   function finishGame(){
     document.querySelector('#completeModal h4').textContent = `🏆 ${winner.name} (${LUDO_NAMES[winner.color]}) Wins!`;
-    const score = Math.max(200, 1000 - seconds*2 - turns*3 + winner.captures*30);
+    const isHumanWinner = !winner.isComputer;
+    const finalScore = isHumanWinner ? (winner.score + 250) : 0; // +250 win bonus, kept only if you won
     document.getElementById('finalTime').textContent = ghFormatTime(seconds);
-    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalScore').textContent = finalScore;
     document.getElementById('finalExtraLabel').textContent = 'Turns';
     document.getElementById('finalHints').textContent = turns;
     document.getElementById('finalExtra2Label').textContent = 'Captures';
     document.getElementById('finalMistakes').textContent = winner.captures;
-    document.getElementById('finalStars').textContent = ghStars(score);
+    document.getElementById('finalStars').textContent = ghStars(finalScore);
     new bootstrap.Modal(document.getElementById('completeModal')).show();
     ghSaveResult({
-      game, mode, size:'-', difficulty:'-', score,
+      game, mode, size:'-', difficulty:'-', score: finalScore,
       time_taken: seconds, mistakes: winner.captures, hints_used: turns,
-      result: (!winner.isComputer) ? 'Won' : 'Lost', daily
+      result: isHumanWinner ? 'Won' : 'Lost', daily
     });
     render();
   }

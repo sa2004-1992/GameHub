@@ -140,6 +140,19 @@ function initSudoku(cfg){
   });
   document.getElementById('eraseBtn').addEventListener('click', () => placeValue(0));
 
+  function causesConflict(r, c, val){
+    // Local Sudoku rule check: does placing `val` at (r,c) duplicate it
+    // in the same row, column, or box? Cycling/trying different numbers
+    // is never a mistake by itself — only an actual rule violation is.
+    for(let cc=0; cc<size; cc++) if(cc!==c && board[r][cc]===val) return true;
+    for(let rr=0; rr<size; rr++) if(rr!==r && board[rr][c]===val) return true;
+    const br = Math.floor(r/boxR)*boxR, bc = Math.floor(c/boxC)*boxC;
+    for(let rr=br; rr<br+boxR; rr++) for(let cc=bc; cc<bc+boxC; cc++){
+      if((rr!==r || cc!==c) && board[rr][cc]===val) return true;
+    }
+    return false;
+  }
+
   function placeValue(val){
     if(!selected || paused || gameOver) return;
     const [r,c] = selected;
@@ -147,12 +160,11 @@ function initSudoku(cfg){
     history.push({r,c,prev: board[r][c]});
     board[r][c] = val;
     if(val !== 0){
-      if(val === solution[r][c]){
+      if(!causesConflict(r, c, val)){
         score += 10;
         flashCell = [r,c]; flashKind = 'ok';
       } else {
         mistakes++;
-        score = Math.max(0, score - 5);
         flashCell = [r,c]; flashKind = 'bad';
       }
     }
@@ -176,7 +188,6 @@ function initSudoku(cfg){
     board[r][c] = solution[r][c];
     fixed[r][c] = true;
     hintsUsed++;
-    score = Math.max(0, score - 5);
     render();
     checkComplete();
   });
@@ -243,7 +254,7 @@ function initSudoku(cfg){
     if(gameOver) return;
     gameOver = true;
     clearInterval(timerId);
-    score += Math.max(0, 200 - seconds);
+    score += 250; // win bonus
     document.getElementById('finalTime').textContent = ghFormatTime(seconds);
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalHints').textContent = hintsUsed;

@@ -112,8 +112,12 @@ function initTango(cfg){
     history.push({r,c,prev:board[r][c]});
     board[r][c] = val;
     if(countScore && val !== 0){
-      if(val === solution[r][c]){ score += 10; flashCell=[r,c]; flashKind='ok'; }
-      else { mistakes++; score = Math.max(0, score-5); flashCell=[r,c]; flashKind='bad'; }
+      // A move only counts as "wrong" if it actually breaks a Tango rule
+      // right now (three-in-a-row, row/col balance, or an =/× edge) —
+      // simply choosing/cycling between Sun and Moon is never a mistake.
+      const res = validate();
+      if(res.valid){ score += 10; flashCell=[r,c]; flashKind='ok'; }
+      else { mistakes++; flashCell=[r,c]; flashKind='bad'; }
     }
   }
 
@@ -213,7 +217,6 @@ function initTango(cfg){
       if(!fixed[r][c] && board[r][c] !== solution[r][c]){
         board[r][c] = solution[r][c]; fixed[r][c] = true;
         hintsUsed++;
-        score = Math.max(0, score-5);
         render(); checkComplete();
         return;
       }
@@ -287,7 +290,7 @@ function initTango(cfg){
     if(gameOver) return;
     gameOver = true;
     clearInterval(timerId);
-    score += Math.max(0, 200 - seconds);
+    score += 250; // win bonus
     document.getElementById('finalTime').textContent = ghFormatTime(seconds);
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalHints').textContent = hintsUsed;
