@@ -1,8 +1,10 @@
 import os
+import csv
+import json
 import random
 from datetime import datetime, date
 
-from flask import Flask, render_template, redirect, url_for, request, jsonify, flash, abort
+from flask import Flask, render_template, redirect, url_for, request, jsonify, flash, abort, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, UserMixin, login_user, login_required,
@@ -17,7 +19,16 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-i
 # Debug mode is read here (module level) so it also takes effect when the
 # app is served by gunicorn/WSGI, not only under `python app.py`.
 app.debug = os.environ.get('FLASK_DEBUG', '0') == '1'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'gamehub.db')
+# Use a real persistent database when one is provided (e.g. Render/Neon
+# Postgres via DATABASE_URL). Falls back to a local SQLite file for local
+# development, where no external database is needed.
+_db_url = os.environ.get('DATABASE_URL')
+if _db_url:
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'gamehub.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -144,7 +155,150 @@ GAMES = {
             "💡 Stuck? You get 5 hints per game — each one highlights a strong move for the side to play, at a small cost to your final score.",
         ],
     },
+    'zip': {
+        'name': 'Zip', 'icon': '⚡', 'type': 'solo',
+        'tagline': 'Number Path Puzzle',
+        'sizes': [5, 6, 7, 8],
+        'rules': [
+            "Connect all numbered cells in order — 1 → 2 → 3 → 4 → ... — and fill every single cell on the board.",
+            "Move only up, down, left, or right — never diagonally.",
+            "Start at cell 1 and follow the numbers in order — you cannot skip a number or connect them out of sequence.",
+            "The path cannot cross or overlap itself, and cannot pass through a black wall (Hard/Expert boards only).",
+            "The puzzle is only complete when the numbered sequence is fully connected AND every playable cell is filled — leaving even one cell empty means it's not solved.",
+            "Drag through cells to build your path, or click an earlier cell on your path to undo back to that point.",
+            "Hints reveal the next correct cell and never cost you points.",
+        ],
+    },
+    'quiz': {
+        'name': 'Quiz', 'icon': '🧠', 'type': 'quiz',
+        'tagline': 'Trivia Challenge',
+        'rules': [
+            "Pick a category, then answer one question at a time — each has 4 answer options.",
+            "As soon as you pick an answer, you'll immediately see Correct or Wrong.",
+            "You can optionally click Check Solution to see the explanation, then click Next Question to continue.",
+            "Correct answer: +10 points. Wrong answer: −5 points (your score never drops below 0). Using a hint never changes your score.",
+            "There's no losing condition — play as many questions as you like, then click Stop Quiz whenever you want. Your progress, score, and time are saved the moment you stop.",
+            "Each category remembers where you left off internally, so you won't see repeat questions until you've gone through the whole question bank — but the question counter always restarts at Question 1 for a new session.",
+            "Every category has a large question bank (1,000+ questions), so there's plenty to explore.",
+        ],
+    },
 }
+# ---------------------------------------------------------------------------
+# Quiz category catalog + question bank (loaded once at startup)
+# ---------------------------------------------------------------------------
+QUIZ_DATA_DIR = os.path.join(basedir, 'data', 'quiz')
+QUIZ_CATEGORIES = {
+    'math':         {'name': 'Math / Mathematics',        'icon': '➗', 'file': '01_Math_Mathematics.csv'},
+    'history':      {'name': 'History',                   'icon': '🏛️', 'file': '02_History.csv'},
+    'science':      {'name': 'Science',                    'icon': '🔬', 'file': '03_Science.csv'},
+    'space':        {'name': 'Space',                      'icon': '🚀', 'file': '04_Space.csv'},
+    'kannada':      {'name': 'Kannada Subjects',           'icon': '📘', 'file': '05_Kannada_Subjects.csv'},
+    'english':      {'name': 'English Subjects',           'icon': '📗', 'file': '06_English_Subjects.csv'},
+    'social':       {'name': 'Social Science',             'icon': '🌍', 'file': '07_Social_Science.csv'},
+    'software':     {'name': 'Software',                   'icon': '💻', 'file': '08_Software.csv'},
+    'hardware':     {'name': 'Hardware',                   'icon': '🖥️', 'file': '09_Hardware.csv'},
+    'ai':           {'name': 'AI – Artificial Intelligence','icon': '🤖', 'file': '10_AI_Artificial_Intelligence.csv'},
+    'ml':           {'name': 'ML – Machine Learning',      'icon': '📈', 'file': '11_ML_Machine_Learning.csv'},
+    'gk':           {'name': 'General Knowledge (GK)',     'icon': '🧠', 'file': '12_General_Knowledge_GK.csv'},
+    'cricket':      {'name': 'Cricket',                    'icon': '🏏', 'file': '13_Cricket.csv'},
+    'chess_quiz':   {'name': 'Chess',                      'icon': '♟️', 'file': '14_Chess.csv'},
+    'aptitude':     {'name': 'Aptitude',                   'icon': '🧮', 'file': '15_Aptitude.csv'},
+    'webdev':       {'name': 'Web Development',            'icon': '🌐', 'file': '16_Web_Development.csv'},
+    'puzzles':      {'name': 'Puzzles',                    'icon': '🧩', 'file': '17_Puzzles.csv'},
+}
+
+_QUIZ_QUESTIONS_CACHE = {}
+
+
+def get_quiz_questions(category_key):
+    """Load (and cache) the question list for a category from its CSV file."""
+    if category_key in _QUIZ_QUESTIONS_CACHE:
+        return _QUIZ_QUESTIONS_CACHE[category_key]
+    info = QUIZ_CATEGORIES.get(category_key)
+    if not info:
+        return []
+    path = os.path.join(QUIZ_DATA_DIR, info['file'])
+    questions = []
+    try:
+        with open(path, encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                answer = (row.get('Correct Answer') or '').strip().upper()
+                if answer not in ('A', 'B', 'C', 'D'):
+                    continue
+                questions.append({
+                    'question': (row.get('Question') or '').strip(),
+                    'options': {
+                        'A': (row.get('Option A') or '').strip(),
+                        'B': (row.get('Option B') or '').strip(),
+                        'C': (row.get('Option C') or '').strip(),
+                        'D': (row.get('Option D') or '').strip(),
+                    },
+                    'correct': answer,
+                    'solution': (row.get('Solution') or '').strip(),
+                })
+    except FileNotFoundError:
+        questions = []
+    _QUIZ_QUESTIONS_CACHE[category_key] = questions
+    return questions
+
+
+# ---------------------------------------------------------------------------
+# Daily Quiz — a fixed set of 17 questions per calendar day, drawn in order
+# from the combined 17,935-question dataset. Every user gets the SAME 17
+# questions on the same day, and the dataset position marches forward one
+# day at a time, wrapping back to the start once it's fully cycled through.
+# ---------------------------------------------------------------------------
+QUIZ_DAILY_FILE = 'All_17_Categories_Combined.csv'
+QUIZ_DAILY_PER_DAY = 17
+QUIZ_DAILY_EPOCH = date(2024, 1, 1)  # fixed reference point so the schedule is stable
+_QUIZ_DAILY_BANK_CACHE = None
+
+
+def get_daily_quiz_bank():
+    global _QUIZ_DAILY_BANK_CACHE
+    if _QUIZ_DAILY_BANK_CACHE is not None:
+        return _QUIZ_DAILY_BANK_CACHE
+    path = os.path.join(QUIZ_DATA_DIR, QUIZ_DAILY_FILE)
+    questions = []
+    try:
+        with open(path, encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                answer = (row.get('Correct Answer') or '').strip().upper()
+                if answer not in ('A', 'B', 'C', 'D'):
+                    continue
+                questions.append({
+                    'question': (row.get('Question') or '').strip(),
+                    'options': {
+                        'A': (row.get('Option A') or '').strip(),
+                        'B': (row.get('Option B') or '').strip(),
+                        'C': (row.get('Option C') or '').strip(),
+                        'D': (row.get('Option D') or '').strip(),
+                    },
+                    'correct': answer,
+                    'solution': (row.get('Solution') or '').strip(),
+                })
+    except FileNotFoundError:
+        questions = []
+    _QUIZ_DAILY_BANK_CACHE = questions
+    return questions
+
+
+def get_daily_quiz_questions_for_today():
+    bank = get_daily_quiz_bank()
+    total = len(bank)
+    if total == 0:
+        return []
+    per_day = QUIZ_DAILY_PER_DAY
+    total_slots = (total + per_day - 1) // per_day  # ceil division, handles any remainder
+    day_index = (date.today() - QUIZ_DAILY_EPOCH).days
+    cycle_pos = day_index % total_slots
+    start = cycle_pos * per_day
+    end = min(start + per_day, total)
+    return bank[start:end]
+
+
 SITE_USER = {
     'full_name': 'Sagar P',
     'username': 'sagar123',
@@ -211,9 +365,22 @@ class DailyChallenge(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'game', 'challenge_date', name='uniq_daily'),)
 
 
+class QuizProgress(db.Model):
+    """Remembers, per user + category, how far into that category's question
+    bank we've gotten — so a new Quiz session continues from unused questions
+    without repeating, while always displaying 'Question 1' on screen."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category = db.Column(db.String(40), nullable=False)
+    next_index = db.Column(db.Integer, default=0)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'category', name='uniq_quiz_progress'),)
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +401,20 @@ def get_daily_record(user_id, game):
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
+def _parse_names_param(names_param):
+    """Safely parse the player-name list passed from the setup screen."""
+    if not names_param:
+        return None
+    try:
+        names = json.loads(names_param)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+        return None
+    # Trim and cap length so a crafted URL can't inject huge strings
+    return [n.strip()[:24] for n in names]
+
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -241,10 +422,40 @@ def index():
     return redirect(url_for('login'))
 
 
-@app.route('/register')
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Registration is disabled — this is a single-user private site.
-    return redirect(url_for('login'))
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    if request.method == 'POST':
+        full_name = request.form.get('full_name', '').strip()
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not all([full_name, username, email, password, confirm_password]):
+            flash('Please fill in every field.', 'danger')
+        elif not username.replace('_', '').isalnum():
+            flash('Username can only contain letters, numbers, and underscores.', 'danger')
+        elif '@' not in email or '.' not in email.split('@')[-1]:
+            flash('Please enter a valid email address.', 'danger')
+        elif len(password) < 6:
+            flash('Password must be at least 6 characters.', 'danger')
+        elif password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+        elif User.query.filter(db.func.lower(User.email) == email).first():
+            flash('An account with that email already exists.', 'danger')
+        elif User.query.filter(db.func.lower(User.username) == username.lower()).first():
+            flash('That username is already taken.', 'danger')
+        else:
+            user = User(full_name=full_name, username=username, email=email)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            login_user(user)
+            return redirect(url_for('home'))
+        return render_template('login.html', show_register=True)
+    return render_template('login.html', show_register=True)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -261,7 +472,8 @@ def login():
             login_user(user)
             return redirect(url_for('home'))
         flash('Invalid username/email or password.', 'danger')
-    return render_template('login.html')
+        return render_template('login.html', show_register=False)
+    return render_template('login.html', show_register=False)
 
 
 @app.route('/logout')
@@ -304,6 +516,11 @@ def game_rules(game):
         return render_template('rules_multi.html', game=game, info=info,
                                 modes=CHESS_MODES, color_options=CHESS_COLORS,
                                 is_chess=True, daily=daily)
+    elif info['type'] == 'quiz':
+        if daily:
+            return redirect(url_for('game_play', game=game, daily=1))
+        return render_template('rules_quiz.html', game=game, info=info,
+                                categories=QUIZ_CATEGORIES)
     else:
         return render_template('rules_multi.html', game=game, info=info,
                                 modes=PLAYER_MODES, color_options=info.get('color_options', []),
@@ -341,18 +558,47 @@ def game_play(game):
         color = request.args.get('color', 'white')
         if color not in ('white', 'black'):
             abort(400)
+        chess_difficulty = request.args.get('difficulty', 'Medium')
+        if chess_difficulty not in ('Easy', 'Medium', 'Hard'):
+            abort(400)
+        chess_names = _parse_names_param(request.args.get('names', ''))
         template = 'games/chess.html'
         return render_template(template, game=game, info=info, mode=mode,
-                                color=color, daily=daily)
+                                color=color, chess_difficulty=chess_difficulty,
+                                names=chess_names, daily=daily)
+    elif info['type'] == 'quiz':
+        if daily:
+            daily_questions = get_daily_quiz_questions_for_today()
+            return render_template('games/quiz.html', game=game, info=info,
+                                    category=None, category_info=None,
+                                    daily=True, daily_questions=daily_questions,
+                                    daily_total=QUIZ_DAILY_PER_DAY)
+        category = request.args.get('category', '')
+        if category not in QUIZ_CATEGORIES:
+            abort(400)
+        # Reset the in-session pointer to the last COMMITTED position every
+        # time the quiz page loads. Only "Finish & Save" advances the real
+        # saved position — so an abandoned attempt always replays the same
+        # questions from the same starting point next time.
+        progress = QuizProgress.query.filter_by(user_id=current_user.id, category=category).first()
+        if not progress:
+            progress = QuizProgress(user_id=current_user.id, category=category, next_index=0)
+            db.session.add(progress)
+            db.session.commit()
+        session[f'quiz_pos_{category}'] = progress.next_index
+        return render_template('games/quiz.html', game=game, info=info,
+                                category=category, category_info=QUIZ_CATEGORIES[category],
+                                daily=False, daily_questions=None, daily_total=0)
     else:
         mode = request.args.get('mode', '2 Players')
         if mode not in PLAYER_MODES:
             abort(400)
         colors_param = request.args.get('colors', '')
         colors = [c for c in colors_param.split(',') if c] or None
+        names = _parse_names_param(request.args.get('names', ''))
         template = f'games/{game}.html'
         return render_template(template, game=game, info=info, mode=mode,
-                                colors=colors, daily=daily)
+                                colors=colors, names=names, daily=daily)
 
 
 @app.route('/history')
@@ -360,6 +606,37 @@ def game_play(game):
 def history():
     records = GameHistory.query.filter_by(user_id=current_user.id).order_by(GameHistory.played_at.desc()).all()
     return render_template('history.html', records=records, games=GAMES)
+
+
+@app.route('/clear_game_data', methods=['POST'])
+@login_required
+def clear_game_data():
+    """Permanently delete every piece of saved GAME data for the logged-in
+    user across all 9 games — history, scores, statistics, daily-challenge
+    records/streaks, and quiz question-bank progress.
+
+    Deliberately untouched: the User row itself (name, username, email,
+    password), and all on-disk assets (game code, question CSVs).
+    Scoped to current_user only, so other accounts are unaffected.
+    """
+    uid = current_user.id
+
+    deleted_history = GameHistory.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    deleted_daily = DailyChallenge.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    deleted_quiz = QuizProgress.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    db.session.commit()
+
+    # Drop any in-flight quiz position held in the browser session so a
+    # cleared account really does start from question 1 again.
+    for key in [k for k in list(session.keys()) if k.startswith('quiz_pos_')]:
+        session.pop(key, None)
+
+    total = deleted_history + deleted_daily + deleted_quiz
+    if total:
+        flash('All game data cleared. Your account details were not changed.', 'success')
+    else:
+        flash('There was no game data to clear.', 'info')
+    return redirect(url_for('profile'))
 
 
 @app.route('/change_password', methods=['POST'])
@@ -390,6 +667,8 @@ def profile():
     total_played, total_won, total_lost, total_score = 0, 0, 0, 0
     best_time = None
     for g in GAMES:
+        if g == 'quiz':
+            continue  # Quiz has its own completely separate stats system below
         g_records = [r for r in records if r.game == g]
         played = len(g_records)
         won = len([r for r in g_records if r.result == 'Won'])
@@ -397,7 +676,9 @@ def profile():
         score = sum(r.score for r in g_records)
         times = [r.time_taken for r in g_records if r.time_taken]
         best = min(times) if times else None
-        stats[g] = {'played': played, 'won': won, 'lost': lost, 'score': score, 'best_time': best}
+        highest_score = max((r.score for r in g_records), default=None)
+        stats[g] = {'played': played, 'won': won, 'lost': lost, 'score': score,
+                     'best_time': best, 'highest_score': highest_score}
         total_played += played
         total_won += won
         total_lost += lost
@@ -423,11 +704,29 @@ def profile():
                 continue
             break
 
+    # Quiz has its own richer stat set (question banks, correct/wrong totals, etc.)
+    # Quiz Statistics only ever reflects Normal Quiz sessions — Daily Quiz
+    # results live in the general Daily Completed / Daily Streak system above,
+    # same as every other game's daily challenge, not in these Quiz numbers.
+    quiz_records = [r for r in records if r.game == 'quiz' and not r.is_daily]
+    quiz_stats = {
+        'played': len(quiz_records),
+        'correct': sum((int(r.size) - r.mistakes) for r in quiz_records if str(r.size).isdigit()),
+        'wrong': sum(r.mistakes for r in quiz_records),
+        'total_score': sum(r.score for r in quiz_records),
+        'highest_score': max((r.score for r in quiz_records), default=0),
+        'highest_questions': max((int(r.size) for r in quiz_records if str(r.size).isdigit()), default=0),
+        'highest_correct': max(((int(r.size) - r.mistakes) for r in quiz_records if str(r.size).isdigit()), default=0),
+        'highest_wrong': max((r.mistakes for r in quiz_records), default=0),
+        'highest_time': max((r.time_taken for r in quiz_records), default=0),
+    }
+
     return render_template('profile.html', games=GAMES, stats=stats,
                             total_played=total_played, total_won=total_won,
                             total_lost=total_lost, total_score=total_score,
                             best_time=best_time,
-                            daily_completed=daily_completed, streak=streak)
+                            daily_completed=daily_completed, streak=streak,
+                            quiz_stats=quiz_stats)
 
 
 @app.route('/leaderboard')
@@ -451,6 +750,65 @@ def leaderboard():
 def api_daily_status(game):
     rec = get_daily_record(current_user.id, game)
     return jsonify({'completed': bool(rec and rec.completed)})
+
+
+@app.route('/api/quiz/next/<category>')
+@login_required
+def api_quiz_next(category):
+    if category not in QUIZ_CATEGORIES:
+        return jsonify({'error': 'invalid category'}), 400
+    questions = get_quiz_questions(category)
+    if not questions:
+        return jsonify({'error': 'no questions available'}), 500
+
+    # This only advances an in-session (cookie) pointer, NOT the saved
+    # database position — so an abandoned quiz never loses its place.
+    # The database position only moves forward when the player clicks
+    # "Finish & Save" (see /api/quiz/finish below).
+    key = f'quiz_pos_{category}'
+    if key not in session:
+        progress = QuizProgress.query.filter_by(user_id=current_user.id, category=category).first()
+        session[key] = progress.next_index if progress else 0
+
+    idx = session[key] % len(questions)
+    q = questions[idx]
+    session[key] = session[key] + 1
+    session.modified = True
+
+    return jsonify({
+        'question': q['question'],
+        'options': q['options'],
+        'correct': q['correct'],
+        'solution': q['solution'],
+        'bank_size': len(questions),
+    })
+
+
+@app.route('/api/quiz/finish', methods=['POST'])
+@login_required
+def api_quiz_finish():
+    data = request.get_json(force=True) or {}
+    category = data.get('category')
+    if category not in QUIZ_CATEGORIES:
+        return jsonify({'error': 'invalid category'}), 400
+    questions = get_quiz_questions(category)
+    if not questions:
+        return jsonify({'error': 'no questions available'}), 500
+
+    key = f'quiz_pos_{category}'
+    session_pos = session.get(key)
+    if session_pos is None:
+        return jsonify({'ok': True, 'committed': False})
+
+    progress = QuizProgress.query.filter_by(user_id=current_user.id, category=category).first()
+    if not progress:
+        progress = QuizProgress(user_id=current_user.id, category=category, next_index=0)
+        db.session.add(progress)
+    progress.next_index = session_pos % len(questions)
+    db.session.commit()
+    session.pop(key, None)
+
+    return jsonify({'ok': True, 'committed': True})
 
 
 @app.route('/api/save_result', methods=['POST'])
