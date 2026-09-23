@@ -52,7 +52,7 @@ body{
 .game-tile-icon{ font-size: 2.2rem; margin-bottom: .3rem; }
 .quick-link{ font-weight: 600; cursor: pointer; }
 .daily-card{ border-radius: 16px; background: linear-gradient(135deg, rgba(91,91,246,.08), rgba(255,159,67,.08)); }
-.size-btn.active-choice, .diff-btn.active-choice, .mode-btn.active-choice{
+.size-btn.active-choice, .diff-btn.active-choice, .mode-btn.active-choice, .category-btn.active-choice{
   background: var(--gh-primary); color: #fff; border-color: var(--gh-primary);
 }
 .btn-primary{ background: var(--gh-primary); border-color: var(--gh-primary); }
@@ -96,26 +96,28 @@ body{
 
 .ludo-board{ width: 480px; max-width: 90vw; margin: 0 auto; aspect-ratio: 1/1; position:relative; background: var(--gh-surface); border: 2px solid var(--gh-text); }
 
-/* ---- Page background images ---- */
+/* ---- Page background themes (self-contained CSS gradients, no external images) ---- */
 :root{ --page-overlay: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0)); }
-[data-theme="dark"]{ --page-overlay: linear-gradient(rgba(6,8,16,0.55), rgba(6,8,16,0.55)); }
+[data-theme="dark"]{ --page-overlay: linear-gradient(rgba(6,8,16,0.62), rgba(6,8,16,0.62)); }
 
 body[class*="page-"]{
   background-image: var(--page-overlay), var(--page-bg);
-  background-repeat: no-repeat, no-repeat;
-  background-size: cover, cover;
+  background-repeat: no-repeat, repeat;
+  background-size: cover, auto;
   background-attachment: fixed, fixed;
   background-position: center, center;
 }
 
-.page-home     { --page-bg: url('/static/images/2.png'); }
-.page-sudoku{ --page-bg: url('/static/images/3.png'); }
-.page-nonogram{ --page-bg: url('/static/images/6.png'); }
-.page-tango{ --page-bg: url('/static/images/3.png'); }
+.page-home{ --page-bg: url('/static/images/bg-home.svg'); }
+.page-sudoku{ --page-bg: url('/static/images/bg-sudoku.svg'); }
+.page-nonogram{ --page-bg: url('/static/images/bg-nonogram.svg'); }
+.page-tango{ --page-bg: url('/static/images/bg-tango.svg'); }
 .page-queens{ --page-bg: url('/static/images/bg-queens.svg'); }
 .page-snakes{ --page-bg: url('/static/images/bg-snakes.svg'); }
-.page-ludo{ --page-bg: url('/static/images/4.png'); }
-.page-chess{ --page-bg: url('/static/images/chess.png'); }
+.page-ludo{ --page-bg: url('/static/images/bg-ludo.svg'); }
+.page-chess{ --page-bg: url('/static/images/bg-chess.svg'); }
+.page-quiz{ --page-bg: url('/static/images/bg-quiz.svg'); }
+.page-zip{ --page-bg: url('/static/images/bg-zip.svg'); }
 
 [data-theme="dark"] .page-home{ --page-bg: url('/static/images/bg-home-dark.svg'); }
 [data-theme="dark"] .page-sudoku{ --page-bg: url('/static/images/bg-sudoku-dark.svg'); }
@@ -125,3 +127,5 @@ body[class*="page-"]{
 [data-theme="dark"] .page-snakes{ --page-bg: url('/static/images/bg-snakes-dark.svg'); }
 [data-theme="dark"] .page-ludo{ --page-bg: url('/static/images/bg-ludo-dark.svg'); }
 [data-theme="dark"] .page-chess{ --page-bg: url('/static/images/bg-chess-dark.svg'); }
+[data-theme="dark"] .page-quiz{ --page-bg: url('/static/images/bg-quiz-dark.svg'); }
+[data-theme="dark"] .page-zip{ --page-bg: url('/static/images/bg-zip-dark.svg'); }
