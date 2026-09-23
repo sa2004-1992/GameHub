@@ -59,7 +59,30 @@
 const IS_CHESS = {{ 'true' if is_chess else 'false' }};
 const COLOR_OPTIONS = {{ color_options | tojson }};
 let chosenMode = null;
+let chosenDifficulty = 'Medium';
 let slotColors = [];   // chosen color id per slot, null = unset
+let slotNames = [];    // player-chosen display name per slot
+
+function nameInputRow(container, index, defaultName){
+  const row = document.createElement('div');
+  row.className = 'mt-2';
+  const label = document.createElement('label');
+  label.className = 'small text-muted mb-1 d-block';
+  label.textContent = 'Player Name';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-control form-control-sm player-name-input';
+  input.maxLength = 24;
+  input.placeholder = defaultName;
+  input.value = defaultName;
+  slotNames[index] = defaultName;
+  input.addEventListener('input', () => {
+    slotNames[index] = input.value.trim() || defaultName;
+  });
+  row.appendChild(label);
+  row.appendChild(input);
+  container.appendChild(row);
+}
 let slotLocked = [];   // true if slot cannot be changed (computer)
 let slotLabels = [];
 
@@ -95,10 +118,46 @@ function buildColorStep(){
   const wrap = document.getElementById('colorSlots');
   const hint = document.getElementById('colorHint');
   wrap.innerHTML = '';
-  slotColors = []; slotLocked = []; slotLabels = [];
+  slotColors = []; slotLocked = []; slotLabels = []; slotNames = [];
 
   if(IS_CHESS){
     hint.textContent = 'Pick which side you want to play.';
+
+    if(chosenMode === 'Vs Computer'){
+      const diffWrap = document.createElement('div');
+      diffWrap.className = 'mb-3';
+      const diffLabel = document.createElement('div');
+      diffLabel.className = 'small fw-semibold mb-1';
+      diffLabel.textContent = 'Computer Difficulty';
+      diffWrap.appendChild(diffLabel);
+      const diffRow = document.createElement('div');
+      diffRow.className = 'd-flex gap-2';
+      const diffHelp = {
+        Easy: 'Great for beginners — you should win most games.',
+        Medium: "A fair fight — you'll win some, lose some.",
+        Hard: 'A strong opponent — the computer will win sometimes.'
+      };
+      ['Easy','Medium','Hard'].forEach(level => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-outline-success diff-btn' + (level===chosenDifficulty ? ' active-choice' : '');
+        b.textContent = level;
+        b.addEventListener('click', () => {
+          chosenDifficulty = level;
+          diffRow.querySelectorAll('button').forEach(x => x.classList.remove('active-choice'));
+          b.classList.add('active-choice');
+          diffHelpEl.textContent = diffHelp[level];
+        });
+        diffRow.appendChild(b);
+      });
+      diffWrap.appendChild(diffRow);
+      const diffHelpEl = document.createElement('p');
+      diffHelpEl.className = 'text-muted small mt-2 mb-0';
+      diffHelpEl.textContent = diffHelp[chosenDifficulty];
+      diffWrap.appendChild(diffHelpEl);
+      wrap.appendChild(diffWrap);
+    }
+
     let chosen = 'white';
     const row = document.createElement('div');
     row.className = 'd-flex gap-2';
@@ -119,6 +178,26 @@ function buildColorStep(){
     });
     wrap.appendChild(row);
     slotColors = [chosen];
+
+    const namesWrap = document.createElement('div');
+    wrap.appendChild(namesWrap);
+    function rebuildChessNames(){
+      namesWrap.innerHTML = '';
+      slotNames = [];
+      if(chosenMode === 'Vs Computer'){
+        nameInputRow(namesWrap, 0, 'Player 1');
+        slotNames[1] = 'Computer';
+        const note = document.createElement('div');
+        note.className = 'small text-muted mt-1';
+        note.textContent = 'Your opponent is always named "Computer".';
+        namesWrap.appendChild(note);
+      } else {
+        nameInputRow(namesWrap, 0, 'White Player');
+        nameInputRow(namesWrap, 1, 'Black Player');
+      }
+    }
+    rebuildChessNames();
+
     document.getElementById('startBtn').disabled = false;
     goStep(3);
     return;
@@ -132,6 +211,12 @@ function buildColorStep(){
     // all 4 colors are used - nothing to choose, auto-assign fixed order
     slotColors = COLOR_OPTIONS.slice(0,4).map(c => c.id);
     hint.textContent = 'All 4 colors are in play — Red, Green, Yellow, Blue.';
+    slotColors.forEach((_, i) => {
+      const row = document.createElement('div');
+      row.className = 'mb-2';
+      nameInputRow(row, i, `Player ${i+1}`);
+      wrap.appendChild(row);
+    });
     document.getElementById('startBtn').disabled = false;
     goStep(3);
     return;
@@ -194,6 +279,19 @@ function buildColorStep(){
     }
     renderSlot0(); renderSlot1();
 
+    const namesWrap2 = document.createElement('div');
+    wrap.appendChild(namesWrap2);
+    nameInputRow(namesWrap2, 0, 'Player 1');
+    if(!isVsComputer){
+      nameInputRow(namesWrap2, 1, 'Player 2');
+    } else {
+      slotNames[1] = 'Computer';
+      const note = document.createElement('div');
+      note.className = 'small text-muted mt-1';
+      note.textContent = 'Your opponent is always named "Computer".';
+      namesWrap2.appendChild(note);
+    }
+
     document.getElementById('startBtn').disabled = false;
     goStep(3);
     return;
@@ -235,6 +333,7 @@ function buildColorStep(){
       btnRow.appendChild(b);
     });
     row.appendChild(btnRow);
+    nameInputRow(row, i, `Player ${i+1}`);
     wrap.appendChild(row);
   });
 
@@ -244,11 +343,13 @@ function buildColorStep(){
 
 function startGame(){
   const daily = {{ 'true' if daily else 'false' }};
+  const namesParam = `&names=${encodeURIComponent(JSON.stringify(slotNames))}`;
   let url;
   if(IS_CHESS){
-    url = `{{ url_for('game_play', game=game) }}?mode=${encodeURIComponent(chosenMode)}&color=${slotColors[0]}${daily ? '&daily=1' : ''}`;
+    const diffParam = chosenMode === 'Vs Computer' ? `&difficulty=${chosenDifficulty}` : '';
+    url = `{{ url_for('game_play', game=game) }}?mode=${encodeURIComponent(chosenMode)}&color=${slotColors[0]}${diffParam}${namesParam}${daily ? '&daily=1' : ''}`;
   } else {
-    url = `{{ url_for('game_play', game=game) }}?mode=${encodeURIComponent(chosenMode)}&colors=${slotColors.join(',')}${daily ? '&daily=1' : ''}`;
+    url = `{{ url_for('game_play', game=game) }}?mode=${encodeURIComponent(chosenMode)}&colors=${slotColors.join(',')}${namesParam}${daily ? '&daily=1' : ''}`;
   }
   window.location.href = url;
 }

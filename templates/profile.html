@@ -5,6 +5,41 @@
 <div class="d-flex align-items-center gap-2 mb-3">
   <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
   <h3 class="mb-0">👤 My Profile</h3>
+  <button type="button" class="btn btn-sm btn-outline-danger ms-auto" data-bs-toggle="modal" data-bs-target="#clearDataModal">
+    🗑️ Clear All Game Data
+  </button>
+</div>
+
+<div class="modal fade" id="clearDataModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">🗑️ Clear All Game Data?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fw-semibold mb-2">This permanently deletes all saved data from all 9 games:</p>
+        <p class="small text-muted mb-3">
+          Sudoku, Nonogram, Tango, Queens, Snakes &amp; Ladders, Ludo, Chess, ZIP, and Quiz —
+          including scores, game history, statistics, personal records, best times,
+          daily-challenge progress and streaks, and all Quiz statistics and history.
+        </p>
+        <div class="alert alert-success small mb-2">
+          <strong>Kept safe:</strong> your account, name, username, email, password, and
+          profile details. The games themselves and the quiz question database are not affected.
+        </div>
+        <div class="alert alert-danger small mb-0">
+          <strong>This cannot be undone.</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('clear_game_data') }}" class="d-inline">
+          <button type="submit" class="btn btn-danger">🗑️ Yes, Delete All Game Data</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="card mb-4">
@@ -69,7 +104,7 @@
 
 <h5 class="fw-bold mb-3">Game Statistics</h5>
 <div class="row g-3">
-  {% for key, info in games.items() %}
+  {% for key, info in games.items() if key != 'quiz' %}
   <div class="col-md-6 col-lg-4">
     <div class="card h-100">
       <div class="card-body">
@@ -79,11 +114,25 @@
           <tr><td>Won</td><td class="text-end fw-bold">{{ stats[key].won }}</td></tr>
           <tr><td>Lost</td><td class="text-end fw-bold">{{ stats[key].lost }}</td></tr>
           <tr><td>Total Score</td><td class="text-end fw-bold">{{ stats[key].score }}</td></tr>
+          <tr><td>Highest Score in One Game</td><td class="text-end fw-bold">{{ stats[key].highest_score if stats[key].highest_score is not none else '-' }}</td></tr>
           <tr><td>Best Time</td><td class="text-end fw-bold">{{ ('%02d:%02d' % (stats[key].best_time // 60, stats[key].best_time % 60)) if stats[key].best_time is not none else '-' }}</td></tr>
         </table>
       </div>
     </div>
   </div>
   {% endfor %}
+</div>
+
+<h5 class="fw-bold mb-3 mt-4">🧠 Quiz Statistics</h5>
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Played</div><div class="fw-bold fs-5">{{ quiz_stats.played }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Correct Answers</div><div class="fw-bold fs-5">{{ quiz_stats.correct }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Wrong Answers</div><div class="fw-bold fs-5">{{ quiz_stats.wrong }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Total Score</div><div class="fw-bold fs-5">{{ quiz_stats.total_score }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Highest Score in One Game</div><div class="fw-bold fs-5">{{ quiz_stats.highest_score }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Highest Questions Played</div><div class="fw-bold fs-5">{{ quiz_stats.highest_questions }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Highest Correct (1 game)</div><div class="fw-bold fs-5">{{ quiz_stats.highest_correct }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Highest Wrong (1 game)</div><div class="fw-bold fs-5">{{ quiz_stats.highest_wrong }}</div></div></div>
+  <div class="col-md-3 col-6"><div class="card p-2 text-center"><div class="small text-muted">Highest Time</div><div class="fw-bold fs-5">{{ '%02d:%02d' % (quiz_stats.highest_time // 60, quiz_stats.highest_time % 60) }}</div></div></div>
 </div>
 {% endblock %}

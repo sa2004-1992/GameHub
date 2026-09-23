@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}{{ info.name }} - Rules{% endblock %}
+{% block body_class %}page-quiz{% endblock %}
+{% block content %}
+<div class="wizard-wrap mx-auto">
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('home') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Home</a>
+    <h3 class="mb-0">{{ info.icon }} {{ info.name }}</h3>
+  </div>
+
+  <div class="step-indicator mb-4">
+    <span class="step active" data-step="1">1. Rules</span>
+    <span class="step" data-step="2">2. Category</span>
+  </div>
+
+  <div class="card step-panel" data-panel="1">
+    <div class="card-body">
+      <h5 class="card-title">📖 Rules &amp; How to Play</h5>
+      <ol class="rules-list">
+        {% for r in info.rules %}<li>{{ r }}</li>{% endfor %}
+      </ol>
+      <button class="btn btn-primary" onclick="goStep(2)">Continue <i class="bi bi-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <div class="card step-panel d-none" data-panel="2">
+    <div class="card-body">
+      <h5 class="card-title">📚 Select a Category</h5>
+      <div class="row g-2">
+        {% for key, cat in categories.items() %}
+        <div class="col-6 col-md-4">
+          <button class="btn btn-outline-primary w-100 text-start category-btn" data-cat="{{ key }}" onclick="selectCategory('{{ key }}', this)">
+            {{ cat.icon }} {{ cat.name }}
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-4">
+        <button class="btn btn-secondary" onclick="goStep(1)"><i class="bi bi-arrow-left"></i> Back</button>
+        <button class="btn btn-success" id="startBtn" disabled onclick="startGame()">▶️ Start Quiz</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let chosenCategory = null;
+function goStep(n){
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.add('d-none'));
+  document.querySelector(`.step-panel[data-panel="${n}"]`).classList.remove('d-none');
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.add('active');
+}
+function selectCategory(cat, btn){
+  chosenCategory = cat;
+  document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active-choice'));
+  btn.classList.add('active-choice');
+  document.getElementById('startBtn').disabled = false;
+}
+function startGame(){
+  window.location.href = `{{ url_for('game_play', game=game) }}?category=${chosenCategory}`;
+}
+</script>
+{% endblock %}
