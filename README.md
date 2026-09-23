@@ -19,8 +19,8 @@ Signup only asks for a full name, username, and password.
 
 A default account is also seeded automatically the first time the app runs:
 
-- **Username:** `sagar123`
-- **Password:** `sagar123`
+- **Username:** `-------`
+- **Password:** `-------`
 
 You can change any account's password from the **Profile** page.
 
